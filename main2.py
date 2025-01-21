@@ -25,18 +25,11 @@ def main():
       continue
     # 将 BGR 图像转换为 RGB
     images.append(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-
   result = detector.DetectSleepPhrase(0, 0, images, None)
-
   if result == None:
     print("failed to detect")
   else:
-    print(result)
+    print(result.to_json())
 
 if __name__ == "__main__":
-  try:
-    print("hello")
-    main()
-  except Exception as e:
-    print(f"except {e}")
-    raise e
+  main()

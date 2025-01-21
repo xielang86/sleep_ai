@@ -1,8 +1,8 @@
 from algorithm import pose
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
+from dataclasses_json import config, dataclass_json
 from enum import Enum
 from common.cache import *
-import json
 # thread safe
 class SleepType(Enum):
   Awake = 0
@@ -11,16 +11,19 @@ class SleepType(Enum):
   DeepSleep = 3
   
 @dataclass
+@dataclass_json
 class SleepResult:
-  sleep_type: SleepType
-  sleep_prob: float
-  duration : int
-  timestamp: int  # seconds
+  sleep_type: SleepType = field(
+    metadata=config(encoder=lambda x: x.name, decoder=lambda x: SleepType[x])
+    )
+  # sleep_type : SleepType = SleepType.Awake
+  sleep_prob: float = 0
+  duration : int = 0
+  timestamp: int = 0 # seconds
 
-  pose_info : pose.PoseResult
-  session_id: int
-  def __str__(self):
-    return json.dumps(asdict(self), indent=4)
+  pose_info : pose.PoseResult = field(default_factory=lambda: pose.PoseType()) 
+  # pose_info : str = "pose info"
+  session_id: int = 0
 
 class SleepPhraseDetector:
   def __init__(self, num):
@@ -29,6 +32,7 @@ class SleepPhraseDetector:
 
   def VoteForCurrentPhrase(self, pose_results) -> SleepType:
     pose_to_freq = [0] * pose.PoseType.Other.value
+
     for r in pose_results:
       pose_to_freq[r.pose_type.value] += r.pose_prob
     max_pose = pose.PoseType.SitDown.value
@@ -46,8 +50,7 @@ class SleepPhraseDetector:
         return SleepType.LightSleep
       else:
         return SleepType.DeepSleep
-    else:
-      return SleepType.Awake
+    return SleepType.Awake
 
   def DetectSleepPhrase(self, uid, session_id, images, audio) -> int: 
     if audio != None:
@@ -64,17 +67,26 @@ class SleepPhraseDetector:
     pose_detector = self.detectors[detector_index]
     pose_results = []
     for image in images:
-      pose_results.append(pose_detector.Detect(image))
+      pose_result = pose_detector.Detect(image)
+      pose_results.append(pose_result)
      
     result = self.VoteForCurrentPhrase(pose_results)
-
     result_list = self.user_cache.get(uid)
     if result_list != None and len(result_list) > 0:
       if result_list[-1].session_id != session_id:
         # clear
         result_list = [result]
-        self.user_cache.set(uid, result)
+        self.user_cache.set(uid, result_list)
       else:
         result_list.append(result)
-    sleep_result = SleepResult(result, 0.5, 1, timestamp, pose_results[0], session_id)
+    sleep_result = SleepResult()
+    print("here")
+    sleep_result.sleep_type = result
+    sleep_result.sleep_prob = 0.5
+    sleep_result.timestamp = timestamp
+    sleep_result.pose_info = pose_results[0].to_json()
+    sleep_result.session_id = session_id
+    print(f"result={result}")
+    print(f"sleep result={sleep_result}")
+    print(sleep_result.to_json())
     return sleep_result

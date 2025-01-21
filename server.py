@@ -42,8 +42,8 @@ class RpcServer:
     for image_base64 in images_base64:
       image_bytes = base64.b64decode(image_base64)
       image_np = np.frombuffer(image_bytes, dtype=np.uint8)
-      image_rgb = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
-      images.append(image_rgb)
+      image_decoded = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
+      images.append(image_decoded)
 
     # 解析 Base64 编码的音频数据
     audio_bytes = None

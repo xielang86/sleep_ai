@@ -3,7 +3,8 @@ import mediapipe as mp
 import cv2
 from typing import Literal
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from dataclasses_json import config, dataclass_json
 from algorithm.util import distance
 
 class PoseType(Enum):
@@ -14,15 +15,19 @@ class PoseType(Enum):
   SitDown = 5
   Stand = 6
   Other = 16
-  
-@dataclass
-class PoseResult:
-  pose_type: PoseType
-  pose_prob: float
 
-  leftEyeClosed: bool
-  rightEyeClosed: bool
-  eyeCloseProb: float
+@dataclass
+@dataclass_json
+class PoseResult:
+  # pose_type: PoseType = field(
+  #   metadata=config(encoder=lambda x: x.name, decoder=lambda x: PoseType[x])
+  # )
+  pose_type: PoseType = PoseType.SitDown
+  pose_prob: float = 0
+
+  leftEyeClosed: bool = True
+  rightEyeClosed: bool = True
+  eyeCloseProb: float = 0
 
 """
 NOSE：鼻子的位置。这个关键点对于定位面部方向以及整体头部位置很有用。
@@ -211,7 +216,8 @@ class PoseDetector:
 
     if pose_results is None or pose_results.pose_landmarks is None:
       print("mediapipe detect none body")
-      return PoseResult(PoseType.HalfLie, 0.1, True, True, 0.1)
+      # return PoseResult(PoseType.HalfLie, 0.1, True, True, 0.1)
+      return PoseResult()
     landmarks = pose_results.pose_landmarks
     
     body_angle = self.CalcBodyAngle(image, landmarks.landmark)
@@ -228,6 +234,12 @@ class PoseDetector:
       
       head_angle = min(head_angle, self.CalcHeadAngle(image, face_landmarks))
       print(f"head angle={head_angle}")
-
     pose_type,pose_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
-    return PoseResult(pose_type, pose_prob, leftEyeClosed, rightEyeClosed, eyeCloseProb)
+    pose_result = PoseResult()
+    pose_result.pose_prob = pose_prob
+    pose_result.pose_type = pose_type
+    pose_result.leftEyeClosed = leftEyeClosed
+    pose_result.rightEyeClosed = rightEyeClosed
+    pose_result.eyeCloseProb = eyeCloseProb
+    return pose_result
+    # return PoseResult(pose_type, pose_prob, leftEyeClosed, rightEyeClosed, eyeCloseProb)
