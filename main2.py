@@ -29,7 +29,7 @@ def main():
   if result == None:
     print("failed to detect")
   else:
-    print(result.to_json())
+    print(result)
 
 if __name__ == "__main__":
   main()

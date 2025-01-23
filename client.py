@@ -6,6 +6,7 @@ import zerorpc,sys,cv2
 def main():
   c = zerorpc.Client()
   c.connect("tcp://127.0.0.1:4242")
+  # c.connect("tcp://114.55.90.104:4242")
 
   request = {
       "uid": "user123",
@@ -45,7 +46,7 @@ def main():
   # 构建请求数据
   # print(request)
   response = c.DetectSleepPhrase(request)
-  # print(response)
+  print(response)
 
 if __name__ == "__main__":
   main()

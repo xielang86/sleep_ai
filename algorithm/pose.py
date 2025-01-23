@@ -1,13 +1,17 @@
+import json
 import math
 import mediapipe as mp
 import cv2
-from typing import Literal
 from enum import Enum
-from dataclasses import dataclass, field
-from dataclasses_json import config, dataclass_json
-from algorithm.util import distance
+from dataclasses import asdict, dataclass
+from common.util import *
+import numpy as np
 
-class PoseType(Enum):
+class Pose(Enum):
+  def __str__(self):
+    return self.name
+
+class BodyPose(Pose):
   LieFlat = 1
   HalfLie = 2
   LieSide = 3
@@ -15,19 +19,53 @@ class PoseType(Enum):
   SitDown = 5
   Stand = 6
   Other = 16
+  
+class HeadPose(Pose):
+  Up = 1
+  Bow = 2
 
+class HandPose(Pose):
+  OnLeg = 1 
+  OnKnee = 2
+  BodySide = 3
+  UpwardToSky = 4
+  PalmDown = 5
+
+class EyePose(Pose):
+  Open = 1
+  Closed = 2
+
+class MouthPose(Pose):
+  Open = 1
+  Closed = 2
+
+class FootPose(Pose):
+  UpLift = 1
+  OnLoad = 2
 @dataclass
-@dataclass_json
 class PoseResult:
-  # pose_type: PoseType = field(
-  #   metadata=config(encoder=lambda x: x.name, decoder=lambda x: PoseType[x])
-  # )
-  pose_type: PoseType = PoseType.SitDown
-  pose_prob: float = 0
+  body: BodyPose = BodyPose.SitDown
+  body_prob: float = 0
 
-  leftEyeClosed: bool = True
-  rightEyeClosed: bool = True
-  eyeCloseProb: float = 0
+  head: HeadPose = HeadPose.Up
+  head_prob:  float = 0
+
+  hand: HandPose = HandPose.BodySide
+  hand_prob = 0
+  
+  left_eye: EyePose = EyePose.Closed
+  left_eye_prob : float = 0
+  right_eye: EyePose = EyePose.Closed
+  right_eye_prob: float = 0
+
+  mouth : MouthPose = MouthPose.Closed
+  mouth_prob : float = 0
+
+  foot: FootPose = FootPose.OnLoad
+  foot_prob : float = 0
+
+  def __str__(self):
+    return json.dumps(asdict(self), indent=4, default=str)
 
 """
 NOSE：鼻子的位置。这个关键点对于定位面部方向以及整体头部位置很有用。
@@ -64,11 +102,6 @@ RIGHT_HEEL：右脚跟的位置。
 LEFT_FOOT_INDEX：左脚食指（脚趾）的位置。在分析脚部细节动作（如踮脚等）时可以用到。
 RIGHT_FOOT_INDEX：右脚食指（脚趾）的位置
 """
-
-import cv2
-import mediapipe as mp
-import numpy as np
-
 # thread unsafe
 class PoseDetector:
   def __init__(self):
@@ -77,10 +110,8 @@ class PoseDetector:
                                  min_tracking_confidence=0.5)
     self.mp_face_mesh = mp.solutions.face_mesh
 
-
-  def DetectEyeOpen(self, image, face_landmarks):
+  def DetectEyePose(self, image, face_landmarks):
     # 眼睛关键点的索引（根据 MediaPipe 的标准）
-    eye_prob = 0.5
     left_eye_landmarks = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
     right_eye_landmarks = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
     left_eye_points = []
@@ -108,20 +139,26 @@ class PoseDetector:
       # 计算眼睛区域的平均灰度值
       average_gray = cv2.cvtColor(eye_roi, cv2.COLOR_BGR2GRAY).mean()
       eyeball_threshold = 85  # 可以根据实际情况调整
-      print(average_gray)
+      eyeball_norm = 100  # 可以根据实际情况调整
       if average_gray < eyeball_threshold:
-        return True
+        return True,(eyeball_norm - average_gray) / eyeball_norm
       else:
-        return False
+        return False,average_gray / eyeball_norm
 
-    left_ear = eye_aspect_ratio(left_eye_points)
-    right_ear = eye_aspect_ratio(right_eye_points)
-    left_eyeball_exists = CheckEyeBall(image, left_eye_points)
-    right_eyeball_exists = CheckEyeBall(image, right_eye_points)
-    ear_threshold = 0.2  # 可以根据实际情况调整这个阈值
-    left_eye_closed = not left_eyeball_exists
-    right_eye_closed = not right_eyeball_exists
-    return left_eye_closed, right_eye_closed,eye_prob
+    # left_ear = eye_aspect_ratio(left_eye_points)
+    # right_ear = eye_aspect_ratio(right_eye_points)
+    left_eyeball_exists,left_eye_prob = CheckEyeBall(image, left_eye_points)
+    right_eyeball_exists,right_eye_prob = CheckEyeBall(image, right_eye_points)
+    # ear_threshold = 0.2  # 可以根据实际情况调整这个阈值
+    
+    left_eye_pose = EyePose.Closed
+    right_eye_pose = EyePose.Closed
+    if (left_eyeball_exists):
+      left_eye_pose = EyePose.Open
+    if (right_eyeball_exists):
+      right_eye_pose = EyePose.Open
+
+    return left_eye_pose, left_eye_prob, right_eye_pose,right_eye_prob
 
   def CalcHeadAngle(self, image, face_landmarks)->float:
     left_eye_corner = face_landmarks.landmark[133]
@@ -166,7 +203,7 @@ class PoseDetector:
     body_angle_deg = math.degrees(body_angle_rad)
     return body_angle_deg
 
-  def DetectPoseByRule(self, landmarks, head_angle, body_angle) -> PoseType:
+  def DetectPoseByRule(self, landmarks, head_angle, body_angle):
     nose = landmarks.landmark[self.mp_pose.PoseLandmark.NOSE.value]
 
     left_eye= landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
@@ -194,52 +231,72 @@ class PoseDetector:
     print(f"eyey={left_eye.y}, nosey={nose.y}, eary={left_ear.y}, mouthy={left_mouth.y}, hip={left_hip.y}, knee={left_knee.y}, ankle={left_ankle.y}")
     print(f"delta nose and mouth, mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
-    pose_prob = 0.5
-    pose_type = PoseType.SitDown
+    body_prob = 0.5
+    body_pose = BodyPose.SitDown
 
     if (head_angle < -150 ) or \
     (left_ear.visibility and left_knee.visibility and left_ear.y > left_knee.y) or \
     (right_ear.visibility and right_knee.visibility and right_ear.y > right_knee.y):
-      pose_type = PoseType.LieFlat
+      body_pose = BodyPose.LieFlat
     elif (head_angle < -100 and body_angle < -88) or (body_angle < -100 and head_angle < -90):
-      pose_type = PoseType.HalfLie 
+      body_pose = BodyPose.HalfLie 
     elif left_knee.visibility > 0.5 and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y):
-      pose_type = PoseType.Stand
+      body_pose = BodyPose.Stand
     # 这里简单假设侧躺的情况（可根据实际情况精确调整）
     # elif abs(left_hip.y - left_knee.y) > 0.2 or abs(right_hip.y - right_knee.y) > 0.2:
     #     pose_type = PoseType.LieSide
-    return pose_type,pose_prob
-         
+    return body_pose,body_prob
+
+  def DetectHandPose(self, landmarks):
+    left_shoulder = landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
+    right_shoulder = landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
+    return HandPose.BodySide,0.5
+
+  def DetectMouthPose(self, landmarks):
+    return MouthPose.Closed,0.5
+
   def Detect(self, image) -> PoseResult:
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    pose_results = self.pose.process(image_rgb)
+    mp_result = self.pose.process(image_rgb)
+    pose_result = PoseResult()
 
-    if pose_results is None or pose_results.pose_landmarks is None:
+    if mp_result is None or mp_result.pose_landmarks is None:
+      print(show_file_and_line(sys._getframe()))
       print("mediapipe detect none body")
       # return PoseResult(PoseType.HalfLie, 0.1, True, True, 0.1)
-      return PoseResult()
-    landmarks = pose_results.pose_landmarks
+      return pose_result
+    landmarks = mp_result.pose_landmarks
     
     body_angle = self.CalcBodyAngle(image, landmarks.landmark)
     # detect eye closed
     face_mesh = self.mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
     results = face_mesh.process(image)
-    leftEyeClosed, rightEyeClosed = True,True
-    eyeCloseProb = 0.5
+
     head_angle = self.CalcHeadAngle2(landmarks)
     print(f"body angle={body_angle}, head angle2={head_angle}")
     if results.multi_face_landmarks:
       face_landmarks = results.multi_face_landmarks[0]
-      leftEyeClosed, rightEyeClosed, eyeCloseProb = self.DetectEyeOpen(image, face_landmarks)
+      # eye
+      pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.DetectEyePose(image, face_landmarks)
       
       head_angle = min(head_angle, self.CalcHeadAngle(image, face_landmarks))
       print(f"head angle={head_angle}")
-    pose_type,pose_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
-    pose_result = PoseResult()
-    pose_result.pose_prob = pose_prob
-    pose_result.pose_type = pose_type
-    pose_result.leftEyeClosed = leftEyeClosed
-    pose_result.rightEyeClosed = rightEyeClosed
-    pose_result.eyeCloseProb = eyeCloseProb
+    # body
+    pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
+    # head
+    pose_result.head = HeadPose.Bow
+    pose_result.head_prob = 0.5
+    if (head_angle < -90):
+      pose_result.head = HeadPose.Up 
+      pose_result.head_prob = max(0 - head_angle, 150) / 150.0
+
+    #mouth 
+    pose_result.mouth,pose_result.mouth_prob = self.DetectMouthPose(landmarks)
+    # hand
+    pose_result.hand,pose_result.hand_prob = self.DetectHandPose(landmarks)
+
+    # foot
+    pose_result.foot = FootPose.OnLoad
+    pose_result.foot_prob = 0.5
+
     return pose_result
-    # return PoseResult(pose_type, pose_prob, leftEyeClosed, rightEyeClosed, eyeCloseProb)
