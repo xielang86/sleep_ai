@@ -2,16 +2,6 @@ import cv2
 from sleep_phrase import SleepPhraseDetector
 import math,sys
 
-def calculate_head_angle(nose_landmark, neck_landmark):
-  # 计算头部仰起角度（弧度）
-  dx = nose_landmark.x - neck_landmark.x
-  dy = nose_landmark.y - neck_landmark.y
-  angle_rad = math.atan2(dy, dx)
-  # 转换为角度
-  angle_deg = math.degrees(angle_rad)
-  return angle_deg
-
-
 def main():
   # 读取图片
   image_paths = sys.argv[1].split(",")

@@ -42,6 +42,16 @@ class SleepPhraseDetector:
       action_result.arm_action != human_action.HumanAction.MotionLess:
       return SleepType.Awake
 
+    if pose_results == None or len(pose_results) == 0:
+      print("detect none pose for vote sleeptype")
+      return SleepType.HalfSleep
+
+    if pose_results[0].left_eye == pose.EyePose.Open or pose_results[0].right_eye == pose.EyePose.Open:
+      return SleepType.Awake
+    
+    if pose_results[0].left_hand == pose.HandPose.LiftOn or pose_results[0].right_hand == pose.HandPose.LiftOn:
+      return SleepType.Awake
+
     pose_to_freq = [0] * pose.BodyPose.Other.value
 
     for r in pose_results:
@@ -56,11 +66,14 @@ class SleepPhraseDetector:
         max_freq = freq
         max_pose = i
 
-    if (max_pose == pose.BodyPose.HalfLie or max_pose == pose.BodyPose.LieFlat):
-      if max_freq < 100:
+    if (max_pose == pose.BodyPose.HalfLie.value or max_pose == pose.BodyPose.LieFlat.value):
+      if max_freq < 2:
+        return SleepType.HalfSleep
+      elif max_freq < 100:
         return SleepType.LightSleep
       else:
         return SleepType.DeepSleep
+    print(show_file_and_line(sys._getframe()))
     return SleepType.Awake
 
   def DetectSleepPhrase(self, uid, session_id, images, audio) -> int: 
@@ -88,9 +101,7 @@ class SleepPhraseDetector:
     # action_result = action_detector.DetectAction(pose_results)
     action_result = human_action.ActionResult()
 
-    print(show_file_and_line(sys._getframe()))
     result = self.VoteForCurrentPhrase(action_result, pose_results)
-    print(show_file_and_line(sys._getframe()))
     result_list = self.user_cache.get(uid)
     if result_list != None and len(result_list) > 0:
       if result_list[-1].session_id != session_id:

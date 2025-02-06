@@ -25,11 +25,13 @@ class HeadPose(Pose):
   Bow = 2
 
 class HandPose(Pose):
-  OnLeg = 1 
-  OnKnee = 2
+  OnThigh = 1 
+  OnAbdomen = 2
   BodySide = 3
   UpwardToSky = 4
   PalmDown = 5
+  OnChest = 6
+  LiftOn = 7
 
 class EyePose(Pose):
   Open = 1
@@ -50,8 +52,10 @@ class PoseResult:
   head: HeadPose = HeadPose.Up
   head_prob:  float = 0
 
-  hand: HandPose = HandPose.BodySide
-  hand_prob = 0
+  left_hand: HandPose = HandPose.BodySide
+  left_hand_prob = 0
+  right_hand: HandPose = HandPose.BodySide
+  right_hand_prob = 0
   
   left_eye: EyePose = EyePose.Closed
   left_eye_prob : float = 0
@@ -106,8 +110,8 @@ RIGHT_FOOT_INDEX：右脚食指（脚趾）的位置
 class PoseDetector:
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5,
-                                 min_tracking_confidence=0.5)
+    self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.2,
+                                 min_tracking_confidence=0.2)
     self.mp_face_mesh = mp.solutions.face_mesh
 
   def DetectEyePose(self, image, face_landmarks):
@@ -247,13 +251,100 @@ class PoseDetector:
     #     pose_type = PoseType.LieSide
     return body_pose,body_prob
 
-  def DetectHandPose(self, landmarks):
-    left_shoulder = landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
-    right_shoulder = landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
-    return HandPose.BodySide,0.5
+  def DetectHandPose(self, image, landmarks):
+    print(show_file_and_line(sys._getframe()))
+    image_height, image_width, _ = image.shape
+    left_hand_pose = HandPose.BodySide
+    left_hand_prob = 0.5
+    right_hand_pose = HandPose.BodySide
+    right_hand_prob = 0.5
+    landmark = landmarks.landmark
+    print(show_file_and_line(sys._getframe()))
+        # 获取左手和右手关键点坐标
+    left_wrist = (int(landmark[self.mp_pose.PoseLandmark.LEFT_WRIST].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.LEFT_WRIST].y * image_height))
+    right_wrist = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].y * image_height))
 
-  def DetectMouthPose(self, landmarks):
-    return MouthPose.Closed,0.5
+    print(show_file_and_line(sys._getframe()))
+    # 获取肩部、腹部、胸口关键点坐标
+    left_shoulder = (int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * image_width),
+                    int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].y * image_height))
+    right_shoulder = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_SHOULDER].x * image_width),
+                      int(landmark[self.mp_pose.PoseLandmark.RIGHT_SHOULDER].y * image_height))
+    mid_shoulder_x = (left_shoulder[0] + right_shoulder[0]) // 2
+    mid_shoulder_y = (left_shoulder[1] + right_shoulder[1]) // 2
+
+    print(show_file_and_line(sys._getframe()))
+    hip_x = (int(landmark[self.mp_pose.PoseLandmark.LEFT_HIP].x * image_width) +
+             int(landmark[self.mp_pose.PoseLandmark.RIGHT_HIP].x * image_width)) // 2
+    hip_y = (int(landmark[self.mp_pose.PoseLandmark.LEFT_HIP].y * image_height) +
+             int(landmark[self.mp_pose.PoseLandmark.RIGHT_HIP].y * image_height)) // 2
+
+    print(show_file_and_line(sys._getframe()))
+    mid_abdomen_x = (mid_shoulder_x + hip_x) // 2
+    mid_abdomen_y = (mid_shoulder_y + hip_y) // 2
+
+    # 定义判断范围的阈值
+    threshold_x = 30
+    threshold_y = 8
+    # 判断左手位置
+    print(show_file_and_line(sys._getframe()))
+    try:
+      if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
+        left_hand_pose = HandPose.BodySide
+      elif abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
+        left_hand_pose = HandPose.OnAbdomen
+      elif abs(left_wrist[0] - mid_shoulder_x) < threshold_x and abs(left_wrist[1] - mid_shoulder_y) < threshold_y:
+        left_hand_pose = HandPose.OnChest
+      elif abs(left_wrist[0] - left_shoulder[0]) > threshold_x and abs(left_wrist[1] - left_shoulder[1]) < threshold_y:
+        print(f"left_wristx={left_wrist}, left_shoulderx={left_shoulder}")
+        left_hand_pose = HandPose.LiftOn
+    except Exception as e:
+      print(e)
+      raise(e)
+
+    print(show_file_and_line(sys._getframe()))
+        # 判断右手位置
+    if abs(right_wrist[0] - right_shoulder[0]) < threshold_x and right_wrist[1] > right_shoulder[1]:
+        right_hand_pose = HandPose.BodySide
+    elif abs(right_wrist[0] - mid_abdomen_x) < threshold_x and abs(right_wrist[1] - mid_abdomen_y) < threshold_y:
+        right_hand_pose = HandPose.OnAbdomen
+    elif abs(right_wrist[0] - mid_shoulder_x) < threshold_x and abs(right_wrist[1] - mid_shoulder_y) < threshold_y:
+        right_hand_pose = HandPose.OnChest
+    elif abs(right_wrist[0] - right_shoulder[0]) > threshold_x and abs(right_wrist[1] - right_shoulder[1]) < threshold_y:
+        print(f"right_wristx={right_wrist}, right_shoulderx={right_shoulder}")
+        right_hand_pose = HandPose.LiftOn
+
+    return left_hand_pose,left_hand_prob,right_hand_pose, right_hand_prob
+
+  def DetectMouthPose(self, image, face_landmarks):
+    # 获取上下嘴唇中心点的索引
+    print(show_file_and_line(sys._getframe()))
+    upper_lip_center_index = 0
+    lower_lip_center_index = 17
+    # 获取上下嘴唇中心点的坐标
+    upper_lip_center = face_landmarks.landmark[upper_lip_center_index]
+    lower_lip_center = face_landmarks.landmark[lower_lip_center_index]
+
+    print(show_file_and_line(sys._getframe()))
+    # 获取图像的高度和宽度
+    image_height, image_width, _ = image.shape
+    # 将归一化的坐标转换为实际像素坐标
+    upper_lip_center_x = int(upper_lip_center.x * image_width)
+    upper_lip_center_y = int(upper_lip_center.y * image_height)
+    lower_lip_center_x = int(lower_lip_center.x * image_width)
+    lower_lip_center_y = int(lower_lip_center.y * image_height)
+    # 计算上下嘴唇中心点之间的垂直距离
+    lip_distance = abs(upper_lip_center_y - lower_lip_center_y)
+    # 设置张嘴的阈值
+    threshold = 10
+    print(show_file_and_line(sys._getframe()))
+    if lip_distance > threshold:
+      print(show_file_and_line(sys._getframe()))
+      return MouthPose.Open,0.5 + min(0.5, lip_distance / threshold - 1)
+    print(show_file_and_line(sys._getframe()))
+    return MouthPose.Closed, 1 - 1.0 * lip_distance / threshold
 
   def Detect(self, image) -> PoseResult:
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -274,6 +365,7 @@ class PoseDetector:
 
     head_angle = self.CalcHeadAngle2(landmarks)
     print(f"body angle={body_angle}, head angle2={head_angle}")
+    print(show_file_and_line(sys._getframe()))
     if results.multi_face_landmarks:
       face_landmarks = results.multi_face_landmarks[0]
       # eye
@@ -281,8 +373,15 @@ class PoseDetector:
       
       head_angle = min(head_angle, self.CalcHeadAngle(image, face_landmarks))
       print(f"head angle={head_angle}")
+
+      #mouth 
+      pose_result.mouth,pose_result.mouth_prob = self.DetectMouthPose(image, face_landmarks)
+      print(f"mouth={pose_result.mouth}")
     # body
+
+    print(show_file_and_line(sys._getframe()))
     pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
+    print(show_file_and_line(sys._getframe()))
     # head
     pose_result.head = HeadPose.Bow
     pose_result.head_prob = 0.5
@@ -290,10 +389,10 @@ class PoseDetector:
       pose_result.head = HeadPose.Up 
       pose_result.head_prob = max(0 - head_angle, 150) / 150.0
 
-    #mouth 
-    pose_result.mouth,pose_result.mouth_prob = self.DetectMouthPose(landmarks)
     # hand
-    pose_result.hand,pose_result.hand_prob = self.DetectHandPose(landmarks)
+    pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.DetectHandPose(image, landmarks)
+    print(show_file_and_line(sys._getframe()))
+    print(f"hand={pose_result.left_hand}")
 
     # foot
     pose_result.foot = FootPose.OnLoad
