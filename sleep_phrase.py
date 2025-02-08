@@ -27,7 +27,7 @@ class SleepResult:
 
   # pose_info: pose.PoseResult = pose.PoseResult()
   pose_info: pose.PoseResult = field(default_factory = pose.PoseResult)
-  recent_action: human_action.ActionResult = human_action.ActionResult()
+  recent_action: human_action.ActionResult = field(default_factory = human_action.ActionResult)
   def __str__(self):
     return json.dumps(asdict(self), indent=4, default=str)
   
