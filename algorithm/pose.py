@@ -352,6 +352,11 @@ class PoseDetector:
     return MouthPose.Closed, 1 - 1.0 * lip_distance / threshold
 
   def Detect(self, image) -> PoseResult:
+    # self.mp_pose = mp.solutions.pose
+    self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.2,
+                                  min_tracking_confidence=0.2)
+    # self.mp_face_mesh = mp.solutions.face_mesh
+
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mp_result = self.pose.process(image_rgb)
     pose_result = PoseResult()
