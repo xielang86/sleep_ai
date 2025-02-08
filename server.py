@@ -21,8 +21,8 @@ class RpcServer:
 
   def _process_request(self, request):
     uid = request.get('uid')
-    session_id = request.get('conversation_id')
-    message_id = request.get('message_id')
+    session_id = request.get('conversationid')
+    message_id = request.get('messageid')
     data = request.get("data")
 
     if data is None:
