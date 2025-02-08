@@ -1,4 +1,4 @@
-import json
+import json,logging
 import math
 import mediapipe as mp
 import cv2
@@ -6,6 +6,28 @@ from enum import Enum
 from dataclasses import asdict, dataclass
 from common.util import *
 import numpy as np
+import logging
+
+# 创建自定义日志记录器
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# 创建控制台处理器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+
+# 创建文件处理器
+file_handler = logging.FileHandler('pose.log')
+file_handler.setLevel(logging.DEBUG)
+
+# 创建日志格式
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# 将处理器添加到日志记录器
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
 
 class Pose(Enum):
   def __str__(self):
@@ -110,7 +132,7 @@ RIGHT_FOOT_INDEX：右脚食指（脚趾）的位置
 class PoseDetector:
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.2,
+    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.2,
                                  min_tracking_confidence=0.2)
     self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
@@ -144,6 +166,8 @@ class PoseDetector:
       average_gray = cv2.cvtColor(eye_roi, cv2.COLOR_BGR2GRAY).mean()
       eyeball_threshold = 85  # 可以根据实际情况调整
       eyeball_norm = 100  # 可以根据实际情况调整
+      logger.info(f'eyeball gray={average_gray} threshold={eyeball_threshold}')
+
       if average_gray < eyeball_threshold:
         return True,(eyeball_norm - average_gray) / eyeball_norm
       else:
@@ -192,7 +216,7 @@ class PoseDetector:
     # 转换为角度
     angle_deg = math.degrees(angle_rad)
 
-    print(f"calc head angle2, dx={dx}, dv={dy}, rad={angle_rad} angle_deg={angle_deg}")
+    # print(f"calc head angle2, dx={dx}, dv={dy}, rad={angle_rad} angle_deg={angle_deg}")
     return angle_deg
     
   def CalcBodyAngle(self, image, landmark)->float:
@@ -201,7 +225,7 @@ class PoseDetector:
     left_shoulder_x, left_shoulder_y = left_shoulder_landmark.x * image.shape[1], left_shoulder_landmark.y * image.shape[0]
     left_hip_x, left_hip_y = left_hip_landmark.x * image.shape[1], left_hip_landmark.y * image.shape[0]
     # 计算上半身向后仰的角度（弧度制）
-    print(f"left shoulder = {left_shoulder_x} left_hip_x={left_hip_x},leftshoudy={left_shoulder_y},lefthipy={left_hip_y}")
+    logger.debug(f"left shoulder = {left_shoulder_x} left_hip_x={left_hip_x},leftshoudy={left_shoulder_y},lefthipy={left_hip_y}")
     dx_body = left_shoulder_x - left_hip_x
     dy_body = left_shoulder_y - left_hip_y
     body_angle_rad = math.atan2(dy_body, dx_body)
@@ -236,9 +260,9 @@ class PoseDetector:
     knee_vis = max(left_knee.visibility, right_knee.visibility)
 
     # first judge sleep pose, xxxlie
-    print(f"mouth_prob={mouth_vis}, knee_vis={knee_vis}")
-    print(f"eyey={left_eye.y}, nosey={nose.y}, eary={left_ear.y}, mouthy={left_mouth.y}, hip={left_hip.y}, knee={left_knee.y}, ankle={left_ankle.y}")
-    print(f"delta nose and mouth, mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
+    logger.debug(f"mouth_prob={mouth_vis}, knee_vis={knee_vis}")
+    logger.debug(f"eyey={left_eye.y}, nosey={nose.y}, eary={left_ear.y}, mouthy={left_mouth.y}, hip={left_hip.y}, knee={left_knee.y}, ankle={left_ankle.y}")
+    logger.debug(f"mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
     body_prob = 0.5
     body_pose = BodyPose.SitDown
@@ -257,21 +281,19 @@ class PoseDetector:
     return body_pose,body_prob
 
   def DetectHandPose(self, image, landmarks):
-    print(show_file_and_line(sys._getframe()))
     image_height, image_width, _ = image.shape
     left_hand_pose = HandPose.BodySide
     left_hand_prob = 0.5
     right_hand_pose = HandPose.BodySide
     right_hand_prob = 0.5
     landmark = landmarks.landmark
-    print(show_file_and_line(sys._getframe()))
-        # 获取左手和右手关键点坐标
+    # 获取左手和右手关键点坐标
     left_wrist = (int(landmark[self.mp_pose.PoseLandmark.LEFT_WRIST].x * image_width),
                   int(landmark[self.mp_pose.PoseLandmark.LEFT_WRIST].y * image_height))
     right_wrist = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].x * image_width),
                   int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].y * image_height))
 
-    print(show_file_and_line(sys._getframe()))
+    # print(show_file_and_line(sys._getframe()))
     # 获取肩部、腹部、胸口关键点坐标
     left_shoulder = (int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * image_width),
                     int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].y * image_height))
@@ -280,13 +302,11 @@ class PoseDetector:
     mid_shoulder_x = (left_shoulder[0] + right_shoulder[0]) // 2
     mid_shoulder_y = (left_shoulder[1] + right_shoulder[1]) // 2
 
-    print(show_file_and_line(sys._getframe()))
     hip_x = (int(landmark[self.mp_pose.PoseLandmark.LEFT_HIP].x * image_width) +
              int(landmark[self.mp_pose.PoseLandmark.RIGHT_HIP].x * image_width)) // 2
     hip_y = (int(landmark[self.mp_pose.PoseLandmark.LEFT_HIP].y * image_height) +
              int(landmark[self.mp_pose.PoseLandmark.RIGHT_HIP].y * image_height)) // 2
 
-    print(show_file_and_line(sys._getframe()))
     mid_abdomen_x = (mid_shoulder_x + hip_x) // 2
     mid_abdomen_y = (mid_shoulder_y + hip_y) // 2
 
@@ -294,7 +314,6 @@ class PoseDetector:
     threshold_x = 30
     threshold_y = 8
     # 判断左手位置
-    print(show_file_and_line(sys._getframe()))
     try:
       if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
         left_hand_pose = HandPose.BodySide
@@ -304,12 +323,11 @@ class PoseDetector:
         left_hand_pose = HandPose.OnChest
       elif abs(left_wrist[0] - left_shoulder[0]) > threshold_x and abs(left_wrist[1] - left_shoulder[1]) < threshold_y:
         print(f"left_wristx={left_wrist}, left_shoulderx={left_shoulder}")
-        left_hand_pose = HandPose.LiftOn
+        left_hand_pose = HandPose.BodySide
     except Exception as e:
       print(e)
       raise(e)
 
-    print(show_file_and_line(sys._getframe()))
         # 判断右手位置
     if abs(right_wrist[0] - right_shoulder[0]) < threshold_x and right_wrist[1] > right_shoulder[1]:
         right_hand_pose = HandPose.BodySide
@@ -325,14 +343,12 @@ class PoseDetector:
 
   def DetectMouthPose(self, image, face_landmarks):
     # 获取上下嘴唇中心点的索引
-    print(show_file_and_line(sys._getframe()))
     upper_lip_center_index = 0
     lower_lip_center_index = 17
     # 获取上下嘴唇中心点的坐标
     upper_lip_center = face_landmarks.landmark[upper_lip_center_index]
     lower_lip_center = face_landmarks.landmark[lower_lip_center_index]
 
-    print(show_file_and_line(sys._getframe()))
     # 获取图像的高度和宽度
     image_height, image_width, _ = image.shape
     # 将归一化的坐标转换为实际像素坐标
@@ -344,11 +360,8 @@ class PoseDetector:
     lip_distance = abs(upper_lip_center_y - lower_lip_center_y)
     # 设置张嘴的阈值
     threshold = 10
-    print(show_file_and_line(sys._getframe()))
     if lip_distance > threshold:
-      print(show_file_and_line(sys._getframe()))
       return MouthPose.Open,0.5 + min(0.5, lip_distance / threshold - 1)
-    print(show_file_and_line(sys._getframe()))
     return MouthPose.Closed, 1 - 1.0 * lip_distance / threshold
 
   def Detect(self, image) -> PoseResult:
@@ -357,30 +370,29 @@ class PoseDetector:
     pose_result = PoseResult()
 
     if mp_result is None or mp_result.pose_landmarks is None:
-      print(show_file_and_line(sys._getframe()))
       print("mediapipe detect none body")
-      # return PoseResult(PoseType.HalfLie, 0.1, True, True, 0.1)
       return pose_result
+
     landmarks = mp_result.pose_landmarks
     
     body_angle = self.CalcBodyAngle(image, landmarks.landmark)
     # detect eye closed
-    results = self.face_mesh.process(image)
+    face_results = self.face_mesh.process(image)
 
     head_angle = self.CalcHeadAngle2(landmarks)
-    print(f"body angle={body_angle}, head angle2={head_angle}")
-    print(show_file_and_line(sys._getframe()))
-    if results.multi_face_landmarks:
-      face_landmarks = results.multi_face_landmarks[0]
+    logger.info(f"body angle={body_angle}, head angle2={head_angle}")
+    if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
+      logger.info("detect face")
+      face_landmarks = face_results.multi_face_landmarks[0]
       # eye
       pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.DetectEyePose(image, face_landmarks)
       
       head_angle = min(head_angle, self.CalcHeadAngle(image, face_landmarks))
-      print(f"head angle={head_angle}")
+      logger.info(f"head angle={head_angle}")
 
       #mouth 
       pose_result.mouth,pose_result.mouth_prob = self.DetectMouthPose(image, face_landmarks)
-      print(f"mouth={pose_result.mouth}")
+      logger.info(f"mouth={pose_result.mouth}")
     # body
 
     pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
@@ -393,8 +405,7 @@ class PoseDetector:
 
     # hand
     pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.DetectHandPose(image, landmarks)
-    print(show_file_and_line(sys._getframe()))
-    print(f"hand={pose_result.left_hand}")
+    logger.info(f"hand={pose_result.left_hand}")
 
     # foot
     pose_result.foot = FootPose.OnLoad
