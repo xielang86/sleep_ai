@@ -208,6 +208,10 @@ class PoseDetector:
     body_angle_deg = math.degrees(body_angle_rad)
     return body_angle_deg
 
+  def DetectXDirection(self, landmarks):
+    # means camera on leftside
+    return 1
+     
   def DetectPoseByRule(self, landmarks, head_angle, body_angle):
     nose = landmarks.landmark[self.mp_pose.PoseLandmark.NOSE.value]
 
