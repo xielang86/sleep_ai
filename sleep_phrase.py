@@ -68,9 +68,11 @@ class SleepPhraseDetector:
         max_pose = i
 
     if (max_pose == pose.BodyPose.HalfLie.value or max_pose == pose.BodyPose.LieFlat.value):
-      if max_freq < 2:
+      if max_freq < 480:
+        return SleepType.Awake
+      elif max_freq < 1024:
         return SleepType.HalfSleep
-      elif max_freq < 100:
+      elif max_freq < 2048:
         return SleepType.LightSleep
       else:
         return SleepType.DeepSleep
