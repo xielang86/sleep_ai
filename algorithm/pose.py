@@ -403,4 +403,5 @@ class PoseDetector:
     pose_result.foot = FootPose.OnLoad
     pose_result.foot_prob = 0.5
 
+    sys.stdout.flush()
     return pose_result

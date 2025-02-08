@@ -117,8 +117,8 @@ class SleepPhraseDetector:
     sleep_result.sleep_type = result
     sleep_result.sleep_prob = 0.5
     sleep_result.timestamp = timestamp
-    sleep_result.pose_info = pose_results[0]
+    sleep_result.pose_info = pose_results[-1]
     sleep_result.recent_action = action_result
-    print(f"result={result}")
+    print(f"pose result={pose_results}")
     print(f"sleep result={sleep_result}")
     return sleep_result
