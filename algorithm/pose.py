@@ -112,7 +112,7 @@ class PoseDetector:
     self.mp_pose = mp.solutions.pose
     self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.2,
                                  min_tracking_confidence=0.2)
-    self.mp_face_mesh = mp.solutions.face_mesh
+    self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
   def DetectEyePose(self, image, face_landmarks):
     # 眼睛关键点的索引（根据 MediaPipe 的标准）
@@ -352,11 +352,6 @@ class PoseDetector:
     return MouthPose.Closed, 1 - 1.0 * lip_distance / threshold
 
   def Detect(self, image) -> PoseResult:
-    # self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.2,
-                                  min_tracking_confidence=0.2)
-    # self.mp_face_mesh = mp.solutions.face_mesh
-
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mp_result = self.pose.process(image_rgb)
     pose_result = PoseResult()
@@ -370,8 +365,7 @@ class PoseDetector:
     
     body_angle = self.CalcBodyAngle(image, landmarks.landmark)
     # detect eye closed
-    face_mesh = self.mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    results = face_mesh.process(image)
+    results = self.face_mesh.process(image)
 
     head_angle = self.CalcHeadAngle2(landmarks)
     print(f"body angle={body_angle}, head angle2={head_angle}")
@@ -389,9 +383,7 @@ class PoseDetector:
       print(f"mouth={pose_result.mouth}")
     # body
 
-    print(show_file_and_line(sys._getframe()))
     pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
-    print(show_file_and_line(sys._getframe()))
     # head
     pose_result.head = HeadPose.Bow
     pose_result.head_prob = 0.5

@@ -89,8 +89,7 @@ class SleepPhraseDetector:
       print(f"empty image for uid={uid}")
       return None
     # do detect
-    # detector_index = uid % len(self.detectors)
-    detector_index = 0  
+    detector_index = uid % len(self.detectors)
     pose_detector = self.pose_detectors[detector_index]
     action_detector = self.action_detectors[detector_index]
 
@@ -110,7 +109,7 @@ class SleepPhraseDetector:
       if result_list[-1].session_id != session_id:
         # clear
         result_list = [result]
-        self.user_cache.set(uid, result_list)
+        # self.user_cache.set(uid, result_list)
       else:
         result_list.append(result)
     sleep_result = SleepResult()
