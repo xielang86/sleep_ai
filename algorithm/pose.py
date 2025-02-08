@@ -201,6 +201,7 @@ class PoseDetector:
     left_shoulder_x, left_shoulder_y = left_shoulder_landmark.x * image.shape[1], left_shoulder_landmark.y * image.shape[0]
     left_hip_x, left_hip_y = left_hip_landmark.x * image.shape[1], left_hip_landmark.y * image.shape[0]
     # 计算上半身向后仰的角度（弧度制）
+    print(f"left shoulder = {left_shoulder_x} left_hip_x={left_hip_x},leftshoudy={left_shoulder_y},lefthipy={left_hip_y}")
     dx_body = left_shoulder_x - left_hip_x
     dy_body = left_shoulder_y - left_hip_y
     body_angle_rad = math.atan2(dy_body, dx_body)
@@ -238,11 +239,11 @@ class PoseDetector:
     body_prob = 0.5
     body_pose = BodyPose.SitDown
 
-    if (head_angle < -150 ) or \
+    if (body_angle > -15 ) or \
     (left_ear.visibility and left_knee.visibility and left_ear.y > left_knee.y) or \
     (right_ear.visibility and right_knee.visibility and right_ear.y > right_knee.y):
       body_pose = BodyPose.LieFlat
-    elif (head_angle < -100 and body_angle < -88) or (body_angle < -100 and head_angle < -90):
+    elif (head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -70):
       body_pose = BodyPose.HalfLie 
     elif left_knee.visibility > 0.5 and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
