@@ -89,7 +89,7 @@ class SleepPhraseDetector:
       print(f"empty image for uid={uid}")
       return None
     # do detect
-    detector_index = uid % len(self.pose_detectors)
+    detector_index = int(timestamp) % len(self.pose_detectors)
     pose_detector = self.pose_detectors[detector_index]
     action_detector = self.action_detectors[detector_index]
 

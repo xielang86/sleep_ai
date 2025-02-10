@@ -5,8 +5,8 @@ import zerorpc,sys,cv2
 
 def main():
   c = zerorpc.Client()
-  # c.connect("tcp://121.43.54.25:4242")
-  c.connect("tcp://192.168.0.116:4242")
+  c.connect("tcp://121.43.54.25:4242")
+  # c.connect("tcp://192.168.0.116:4242")
   # c.connect("tcp://127.0.0.1:4242")
   # c.connect("tcp://114.55.90.104:4242")
 

@@ -5,6 +5,7 @@ import cv2
 from enum import Enum
 from dataclasses import asdict, dataclass
 from common.util import *
+
 import numpy as np
 import logging
 
@@ -68,7 +69,7 @@ class FootPose(Pose):
   OnLoad = 2
 @dataclass
 class PoseResult:
-  body: BodyPose = BodyPose.SitDown
+  body: BodyPose = BodyPose.HalfLie
   body_prob: float = 0
 
   head: HeadPose = HeadPose.Up
@@ -132,8 +133,8 @@ RIGHT_FOOT_INDEX：右脚食指（脚趾）的位置
 class PoseDetector:
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.2,
-                                 min_tracking_confidence=0.2)
+    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.05,
+                                 min_tracking_confidence=0.1)
     self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
   def DetectEyePose(self, image, face_landmarks):
@@ -209,23 +210,32 @@ class PoseDetector:
     right_eye = pos_landmarks.landmark[self.mp_pose.PoseLandmark.RIGHT_EYE.value]
     right_mouth= pos_landmarks.landmark[self.mp_pose.PoseLandmark.MOUTH_RIGHT.value]
 
+    logger.debug(f"left eye= {left_eye} left_mouth={left_mouth},right_eye={right_eye},right_mouth={right_mouth}")
+
     dx = left_eye.x - left_mouth.x
     dy = left_eye.y - left_mouth.y
-    # 计算角度（弧度）
+    # 计算角度
     angle_rad = math.atan2(dy, dx)
     # 转换为角度
     angle_deg = math.degrees(angle_rad)
+    logger.debug(f"dy= {dy} dx={dx},angle={angle_rad},angle_deg={angle_deg}")
 
-    # print(f"calc head angle2, dx={dx}, dv={dy}, rad={angle_rad} angle_deg={angle_deg}")
     return angle_deg
     
-  def CalcBodyAngle(self, image, landmark)->float:
+  def CalcBodyAngle(self, image, landmark)->float: 
     left_shoulder_landmark = landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
     left_hip_landmark = landmark[self.mp_pose.PoseLandmark.LEFT_HIP.value]
     left_shoulder_x, left_shoulder_y = left_shoulder_landmark.x * image.shape[1], left_shoulder_landmark.y * image.shape[0]
     left_hip_x, left_hip_y = left_hip_landmark.x * image.shape[1], left_hip_landmark.y * image.shape[0]
     # 计算上半身向后仰的角度（弧度制）
     logger.debug(f"left shoulder = {left_shoulder_x} left_hip_x={left_hip_x},leftshoudy={left_shoulder_y},lefthipy={left_hip_y}")
+
+    right_shoulder_landmark = landmark[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
+    right_hip_landmark = landmark[self.mp_pose.PoseLandmark.RIGHT_HIP.value]
+    right_shoulder_x, right_shoulder_y = right_shoulder_landmark.x * image.shape[1], right_shoulder_landmark.y * image.shape[0]
+    right_hip_x, right_hip_y = right_hip_landmark.x * image.shape[1], right_hip_landmark.y * image.shape[0]
+    logger.debug(f"right shoulderx = {right_shoulder_x} right_hip_x={right_hip_x},rightshoudy={right_shoulder_y},righthipy={right_hip_y}")
+
     dx_body = left_shoulder_x - left_hip_x
     dy_body = left_shoulder_y - left_hip_y
     body_angle_rad = math.atan2(dy_body, dx_body)
@@ -267,11 +277,11 @@ class PoseDetector:
     body_prob = 0.5
     body_pose = BodyPose.SitDown
 
-    if (body_angle > -15 ) or \
+    if (body_angle > -15 or body_angle < -165) or \
     (left_ear.visibility and left_knee.visibility and left_ear.y > left_knee.y) or \
     (right_ear.visibility and right_knee.visibility and right_ear.y > right_knee.y):
       body_pose = BodyPose.LieFlat
-    elif (head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -70):
+    elif (head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -70) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie 
     elif left_knee.visibility > 0.5 and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
@@ -293,6 +303,11 @@ class PoseDetector:
     right_wrist = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].x * image_width),
                   int(landmark[self.mp_pose.PoseLandmark.RIGHT_WRIST].y * image_height))
 
+    left_elbow = (int(landmark[self.mp_pose.PoseLandmark.LEFT_ELBOW].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.LEFT_ELBOW].y * image_height))
+    right_elbow = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].y * image_height))
+
     # print(show_file_and_line(sys._getframe()))
     # 获取肩部、腹部、胸口关键点坐标
     left_shoulder = (int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * image_width),
@@ -309,35 +324,34 @@ class PoseDetector:
 
     mid_abdomen_x = (mid_shoulder_x + hip_x) // 2
     mid_abdomen_y = (mid_shoulder_y + hip_y) // 2
-
+    hip_pair = (hip_x, hip_y)
+    dist_wrist_hip = distance_pair(hip_pair, left_wrist)
+    dist_wrist_elbow = distance_pair(left_wrist, left_elbow)
     # 定义判断范围的阈值
     threshold_x = 30
     threshold_y = 8
     # 判断左手位置
-    try:
-      if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
-        left_hand_pose = HandPose.BodySide
-      elif abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
-        left_hand_pose = HandPose.OnAbdomen
-      elif abs(left_wrist[0] - mid_shoulder_x) < threshold_x and abs(left_wrist[1] - mid_shoulder_y) < threshold_y:
-        left_hand_pose = HandPose.OnChest
-      elif abs(left_wrist[0] - left_shoulder[0]) > threshold_x and abs(left_wrist[1] - left_shoulder[1]) < threshold_y:
-        print(f"left_wristx={left_wrist}, left_shoulderx={left_shoulder}")
-        left_hand_pose = HandPose.BodySide
-    except Exception as e:
-      print(e)
-      raise(e)
+    logger.debug(f"left_wrist={left_wrist}, left_shoulder={left_shoulder}, left_ebow={left_elbow}, wrist_elbow={dist_wrist_elbow},wrist_hip={dist_wrist_hip}")
+    if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
+      left_hand_pose = HandPose.BodySide
+    elif abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
+      left_hand_pose = HandPose.OnAbdomen
+    elif abs(left_wrist[0] - mid_shoulder_x) < threshold_x and abs(left_wrist[1] - mid_shoulder_y) < threshold_y:
+      left_hand_pose = HandPose.OnChest
+    elif left_wrist[1] - left_shoulder[1] < 5 and 2 * dist_wrist_elbow < dist_wrist_hip:
+      left_hand_pose = HandPose.LiftOn
 
         # 判断右手位置
+    right_dist_wrist_hip = distance_pair(hip_pair, right_wrist)
+    right_dist_wrist_elbow = distance_pair(left_wrist, right_elbow)
     if abs(right_wrist[0] - right_shoulder[0]) < threshold_x and right_wrist[1] > right_shoulder[1]:
-        right_hand_pose = HandPose.BodySide
+      right_hand_pose = HandPose.BodySide
     elif abs(right_wrist[0] - mid_abdomen_x) < threshold_x and abs(right_wrist[1] - mid_abdomen_y) < threshold_y:
-        right_hand_pose = HandPose.OnAbdomen
+      right_hand_pose = HandPose.OnAbdomen
     elif abs(right_wrist[0] - mid_shoulder_x) < threshold_x and abs(right_wrist[1] - mid_shoulder_y) < threshold_y:
-        right_hand_pose = HandPose.OnChest
-    elif abs(right_wrist[0] - right_shoulder[0]) > threshold_x and abs(right_wrist[1] - right_shoulder[1]) < threshold_y:
-        print(f"right_wristx={right_wrist}, right_shoulderx={right_shoulder}")
-        right_hand_pose = HandPose.LiftOn
+      right_hand_pose = HandPose.OnChest
+    elif right_wrist[1] - right_shoulder[1] < 5 and 2 * right_dist_wrist_elbow < right_dist_wrist_hip:
+      right_hand_pose = HandPose.LiftOn
 
     return left_hand_pose,left_hand_prob,right_hand_pose, right_hand_prob
 
