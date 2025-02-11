@@ -204,7 +204,7 @@ class PoseDetector:
     angle_deg = math.degrees(angle_rad)
     return angle_deg
 
-  def CalcHeadAngle2(self, pos_landmarks)->float:
+  def CalcHeadAngle2(self, pos_landmarks, image)->float:
     left_eye= pos_landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
     left_mouth= pos_landmarks.landmark[self.mp_pose.PoseLandmark.MOUTH_LEFT.value]
     right_eye = pos_landmarks.landmark[self.mp_pose.PoseLandmark.RIGHT_EYE.value]
@@ -212,8 +212,17 @@ class PoseDetector:
 
     logger.debug(f"left eye= {left_eye} left_mouth={left_mouth},right_eye={right_eye},right_mouth={right_mouth}")
 
-    dx = left_eye.x - left_mouth.x
-    dy = left_eye.y - left_mouth.y
+    # 获取关键点的像素坐标
+    left_eye_x, left_eye_y= int(left_eye.x * image.shape[1]), int(left_eye.y * image.shape[0])
+    left_mouth_x, left_mouth_y = int(left_mouth.x * image.shape[1]), int(left_mouth.y * image.shape[0])
+    dx = left_eye_x - left_mouth_x
+    dy = left_eye_y - left_mouth_y
+    if(right_mouth.visibility > 0.5):
+      right_eye_x, right_eye_y= int(right_eye.x * image.shape[1]), int(right_eye.y * image.shape[0])
+      right_mouth_x, right_mouth_y = int(right_mouth.x * image.shape[1]), int(right_mouth.y * image.shape[0])
+      dx = right_eye_x - right_mouth_x
+      dy = right_eye_y - right_mouth_y
+
     # 计算角度
     angle_rad = math.atan2(dy, dx)
     # 转换为角度
@@ -275,16 +284,19 @@ class PoseDetector:
     logger.debug(f"mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
     body_prob = 0.5
-    body_pose = BodyPose.SitDown
-
-    if (body_angle > -15 or body_angle < -165) or \
-    (left_ear.visibility and left_knee.visibility and left_ear.y > left_knee.y) or \
-    (right_ear.visibility and right_knee.visibility and right_ear.y > right_knee.y):
+    body_pose = BodyPose.HalfLie
+    if body_angle < 0 and ((body_angle > -10 or body_angle < -170) or \
+    ((body_angle < -165 or body_angle > -15) and ((left_ear.visibility > 0.5 and left_knee.visibility > 0.5 and left_ear.y > left_knee.y) or \
+    (right_ear.visibility > 0.5 and right_knee.visibility > 0.5 and right_ear.y > right_knee.y)))):
       body_pose = BodyPose.LieFlat
-    elif (head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -70) or (body_angle < -108 and head_angle < -96):
+    elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie 
     elif left_knee.visibility > 0.5 and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
+    elif abs(body_angle) > 85 and abs(body_angle) < 95 or \
+      (abs(body_angle) > 75 and abs(body_angle) < 105 and abs(head_angle) > 85 and abs(head_angle) < 95):
+      body_pose = BodyPose.SitDown
+    
     # 这里简单假设侧躺的情况（可根据实际情况精确调整）
     # elif abs(left_hip.y - left_knee.y) > 0.2 or abs(right_hip.y - right_knee.y) > 0.2:
     #     pose_type = PoseType.LieSide
@@ -393,7 +405,7 @@ class PoseDetector:
     # detect eye closed
     face_results = self.face_mesh.process(image)
 
-    head_angle = self.CalcHeadAngle2(landmarks)
+    head_angle = self.CalcHeadAngle2(landmarks, image)
     logger.info(f"body angle={body_angle}, head angle2={head_angle}")
     if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
       logger.info("detect face")
