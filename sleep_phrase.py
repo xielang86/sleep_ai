@@ -1,4 +1,4 @@
-import json
+import json,cv2
 from common.util import *
 from algorithm import pose,human_action
 from dataclasses import dataclass, asdict, field
@@ -79,11 +79,17 @@ class SleepPhraseDetector:
     print(show_file_and_line(sys._getframe()))
     return SleepType.Awake
 
+  def SaveForDebug(self, timestamp, image):
+      filename="%d.jpg" % timestamp
+      print("save %s" % filename)
+      cv2.imwrite(filename, image)
+
   def DetectSleepPhrase(self, uid, session_id, images, audio) -> int: 
     if audio != None:
       print("detect for audio emotion")
       # do the emotion detect
     timestamp = int(time.time()) / 1000
+    # self.SaveForDebug(timestamp, images[0])
 
     if images == None or len(images) == 0:
       print(f"empty image for uid={uid}")

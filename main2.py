@@ -14,12 +14,14 @@ def main():
       print(f"Could not read the image at {image_path}")
       continue
     # 将 BGR 图像转换为 RGB
-    images.append(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-  result = detector.DetectSleepPhrase(0, 0, images, None)
-  if result == None:
-    print("failed to detect")
-  else:
-    print(result)
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+    images.append(rgb_image)
+    result = detector.DetectSleepPhrase(0, 0, images, None)
+    if result == None:
+      print("failed to detect")
+    else:
+      print(result)
 
 if __name__ == "__main__":
   main()
