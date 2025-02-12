@@ -1,7 +1,9 @@
 from collections import deque
+import logging
 from enum import Enum
 from dataclasses import dataclass
 from common.util import *
+from common.logger import CreateCustomLogger
 
 class HumanAction(Enum):
   Talking = 0
@@ -25,6 +27,7 @@ class ActionResult:
 
 # thread unsafe
 class HumanActionDetector:
+  logger = CreateCustomLogger("action.log", __name__, logging.DEBUG)
   def __init__(self):
     self.recent_poses = deque(maxlen=8) # 2s for 4 pose , 4s
 
@@ -34,7 +37,7 @@ class HumanActionDetector:
 
   def DetectFaceAction(self):
     mouth_action = [0, 0, 0] 
-    result = HumanAction.Talking
+    result = HumanAction.MotionLess
     prob = 0
     for pose in self.recent_poses:
       if mouth_action[pose.mouth.value] == 0:
@@ -43,33 +46,28 @@ class HumanActionDetector:
     s = 0  
     for a in mouth_action:
       s += a
-
     if s > 1:
       result = HumanAction.Talking
+      HumanActionDetector.logger.info(f"mouth action={result}")
       prob = 0.5
 
     return result,prob
 
   def DetectBodyAction(self):
-    result = HumanAction.Talking
+    result = HumanAction.MotionLess
     prob = 0
     return result,prob
   
   def DetectArmAction(self):
-    result = HumanAction.Talking
+    result = HumanAction.MotionLess
     prob = 0
     return result,prob
     
   def DetectAction(self, new_poses)->ActionResult:
-    print(show_file_and_line(sys._getframe()))
     result = ActionResult()
     self.AddPose(new_poses)
     
-    print(show_file_and_line(sys._getframe()))
     result.face_action,result.face_prob = self.DetectFaceAction()
-    print(show_file_and_line(sys._getframe()))
     result.body_action,result.body_prob = self.DetectBodyAction()
-    print(show_file_and_line(sys._getframe()))
     result.arm_action,result.arm_prob = self.DetectArmAction()
-    print(show_file_and_line(sys._getframe()))
     return result

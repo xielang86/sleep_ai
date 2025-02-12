@@ -1,6 +1,6 @@
 import json,cv2
 from common.util import *
-from algorithm import pose,human_action
+from algorithm import pose,human_action,pose_detector
 from dataclasses import dataclass, asdict, field
 from enum import Enum
 from common.cache import *
@@ -34,8 +34,8 @@ class SleepResult:
 # thread safe
 class SleepPhraseDetector:
   def __init__(self, num):
-    self.pose_detectors = [pose.PoseDetector() for _ in range(num)]
-    self.action_detectors = [human_action.HumanActionDetector for _ in range(num)]
+    self.pose_detectors = [pose_detector.PoseDetector() for _ in range(num)]
+    self.action_detectors = [human_action.HumanActionDetector() for _ in range(num)]
     self.user_cache = ThreadSafeCache(1024*1024, 3600)
 
   def VoteForCurrentPhrase(self, action_result, pose_results) -> SleepType:
@@ -76,7 +76,6 @@ class SleepPhraseDetector:
         return SleepType.LightSleep
       else:
         return SleepType.DeepSleep
-    print(show_file_and_line(sys._getframe()))
     return SleepType.Awake
 
   def SaveForDebug(self, timestamp, image):
@@ -102,13 +101,13 @@ class SleepPhraseDetector:
     # detect poses
     pose_results = []
     for image in images:
-      pose_result = pose_detector.Detect(uid, image)
+      pose_result = pose_detector.Detect(session_id, image)
       pose_results.append(pose_result)
+
 
     # detect action 
     # action_result = action_detector.DetectAction(pose_results)
     action_result = human_action.ActionResult()
-
     result = self.VoteForCurrentPhrase(action_result, pose_results)
     result_list = self.user_cache.get(uid)
     if result_list != None and len(result_list) > 0:
