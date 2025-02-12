@@ -14,9 +14,9 @@ def main():
       print(f"Could not read the image at {image_path}")
       continue
     # 将 BGR 图像转换为 RGB
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-    images.append(rgb_image)
+    images.append(image)
     result = detector.DetectSleepPhrase(0, 0, images, None)
     if result == None:
       print("failed to detect")

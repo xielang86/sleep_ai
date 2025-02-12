@@ -322,6 +322,11 @@ class PoseDetector:
     right_elbow = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].x * image_width),
                   int(landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].y * image_height))
 
+    left_thumb = (int(landmark[self.mp_pose.PoseLandmark.LEFT_THUMB].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.LEFT_THUMB].y * image_height))
+    right_thumb = (int(landmark[self.mp_pose.PoseLandmark.RIGHT_THUMB].x * image_width),
+                  int(landmark[self.mp_pose.PoseLandmark.RIGHT_THUMB].y * image_height))
+
     # print(show_file_and_line(sys._getframe()))
     # 获取肩部、腹部、胸口关键点坐标
     left_shoulder = (int(landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x * image_width),
@@ -341,11 +346,13 @@ class PoseDetector:
     hip_pair = (hip_x, hip_y)
     dist_wrist_hip = distance_pair(hip_pair, left_wrist)
     dist_wrist_elbow = distance_pair(left_wrist, left_elbow)
+    dist_thumb_elbow = distance_pair(left_thumb, left_elbow)
     # 定义判断范围的阈值
     threshold_x = 30
     threshold_y = 8
     # 判断左手位置
     logger.debug(f"left_wrist={left_wrist}, left_shoulder={left_shoulder}, left_ebow={left_elbow}, wrist_elbow={dist_wrist_elbow},wrist_hip={dist_wrist_hip}")
+    logger.debug(f"left_thumb={left_thumb}, right_thumb={right_thumb}, thumb_elbow={dist_thumb_elbow}")
     if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
       left_hand_pose = HandPose.BodySide
     elif abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
@@ -392,11 +399,12 @@ class PoseDetector:
       return MouthPose.Open,0.5 + min(0.5, lip_distance / threshold - 1)
     return MouthPose.Closed, 1 - 1.0 * lip_distance / threshold
 
-  def Detect(self, image) -> PoseResult:
-    # image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+  def Detect(self, uid, image) -> PoseResult:
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mp_result = self.pose.process(image)
     pose_result = PoseResult()
 
+    logger.info(f"uid={uid}")
     if mp_result is None or mp_result.pose_landmarks is None:
       print("mediapipe detect none body")
       return pose_result

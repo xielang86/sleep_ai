@@ -102,7 +102,7 @@ class SleepPhraseDetector:
     # detect poses
     pose_results = []
     for image in images:
-      pose_result = pose_detector.Detect(image)
+      pose_result = pose_detector.Detect(uid, image)
       pose_results.append(pose_result)
 
     # detect action 

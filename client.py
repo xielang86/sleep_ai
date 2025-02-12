@@ -31,10 +31,10 @@ def main():
       print(f"Could not read the image at {image_path}")
       continue
     # 将 BGR 图像转换为 RGB 图像
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    print(f"rgb image= {len(rgb_image)}")
+    # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    print(f"rgb image= {len(image)}")
 
-    _, buffer = cv2.imencode('.jpg', rgb_image)
+    _, buffer = cv2.imencode('.jpg', image)
     # _, buffer = cv2.imencode('.jpg', image)
     image_bytes = buffer.tobytes()
     # 将字节数据进行 Base64 编码
