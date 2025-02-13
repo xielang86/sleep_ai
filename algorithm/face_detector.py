@@ -18,7 +18,7 @@ class FaceDetector:
     def CalcEyeCloseOpen(ratio):
       eye_pose = EyePose.Closed
       prob = 0
-      if ratio < 0.3:
+      if ratio < 0.304:
         prob = min (1 - (ratio - 0.1), 1)
         eye_pose = EyePose.Closed
       else:
@@ -56,6 +56,36 @@ class FaceDetector:
     FaceDetector.logger.info(f"left_eye_ratio={left_ratio} right_eye_ratio={right_ratio}")
 
     return left_eye_pose,left_prob,right_eye_pose,right_prob
+
+  def CalFaceAngle(self, image, face_landmarks):
+    ih, iw, _ = image.shape
+    mid_brow = face_landmarks.landmark[168]
+    mid_brow_point = (int(mid_brow.x * iw), int(mid_brow.y * ih))
+    # 下巴
+    chin = face_landmarks.landmark[152]
+    chin_point = (int(chin.x * iw), int(chin.y * ih))
+    # 左耳
+    left_ear = face_landmarks.landmark[234]
+    left_ear_point = (int(left_ear.x * iw), int(left_ear.y * ih))
+    # 右耳
+    right_ear = face_landmarks.landmark[454]
+    right_ear_point = (int(right_ear.x * iw), int(right_ear.y * ih))
+    # 左眼眼角
+    left_eye_corner = face_landmarks.landmark[33]
+    left_eye_corner_point = (int(left_eye_corner.x * iw), int(left_eye_corner.y * ih))
+    # 右眼眼角
+    right_eye_corner = face_landmarks.landmark[263]
+    right_eye_corner_point = (int(right_eye_corner.x * iw), int(right_eye_corner.y * ih))
+
+    # 计算俯仰角, 90 是正中间
+    pitch_angle = np.arctan2(chin_point[1] - mid_brow_point[1], chin_point[0] - mid_brow_point[0]) * 180 / np.pi
+
+    # 计算偏航角, 90 脸平行于摄像头
+    yaw_angle = np.arctan2(right_ear_point[0] - left_ear_point[0], right_ear_point[1] - left_ear_point[1]) * 180 / np.pi
+
+    # 计算翻滚角 , 0是头不歪
+    roll_angle = np.arctan2(right_eye_corner_point[1] - left_eye_corner_point[1], right_eye_corner_point[0] - left_eye_corner_point[0]) * 180 / np.pi
+    return (pitch_angle, yaw_angle, roll_angle)
 
   def CalcHeadAngle(self, image, face_landmarks)->float:
     ih, iw, _ = image.shape

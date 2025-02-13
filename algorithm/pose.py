@@ -40,6 +40,11 @@ class MouthPose(Pose):
 class FootPose(Pose):
   UpLift = 1
   OnLoad = 2
+
+class FaceDirection(Pose):
+  HalfToCamera = 1
+  TowardToCamera = 2
+  
 @dataclass
 class PoseResult:
   body: BodyPose = BodyPose.HalfLie
@@ -47,6 +52,9 @@ class PoseResult:
 
   head: HeadPose = HeadPose.Up
   head_prob:  float = 0
+
+  face_direction: FaceDirection = FaceDirection.HalfToCamera
+  face_prob: float = 0
 
   left_hand: HandPose = HandPose.BodySide
   left_hand_prob = 0
