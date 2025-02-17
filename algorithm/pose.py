@@ -53,8 +53,8 @@ class PoseResult:
   head: HeadPose = HeadPose.Up
   head_prob:  float = 0
 
-  face_direction: FaceDirection = FaceDirection.HalfToCamera
-  face_prob: float = 0
+  # face_direction: FaceDirection = FaceDirection.HalfToCamera
+  # face_prob: float = 0
 
   left_hand: HandPose = HandPose.BodySide
   left_hand_prob = 0

@@ -126,9 +126,10 @@ class PoseDetector:
 
     mouth_vis = max(left_mouth.visibility, right_mouth.visibility)
     knee_vis = max(left_knee.visibility, right_knee.visibility)
-    hip_vis = left_hip.visibility
+    left_hip_vis = left_hip.visibility
+    right_hip_vis = right_hip.visibility
     # first judge sleep pose, xxxlie
-    PoseDetector.logger.debug(f"mouth_prob={mouth_vis}, knee_vis={knee_vis}, left_hip_vis={hip_vis}")
+    PoseDetector.logger.debug(f"mouth_vis={mouth_vis}, knee_vis={knee_vis}, left_hip_vis={left_hip_vis},right_hip_vis={right_hip_vis}")
     PoseDetector.logger.debug(f"eyey={left_eye.y}, nosey={nose.y}, eary={left_ear.y}, mouthy={left_mouth.y}, hip={left_hip.y}, knee={left_knee.y}, ankle={left_ankle.y}")
     PoseDetector.logger.debug(f"mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
@@ -177,9 +178,11 @@ class PoseDetector:
       pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.face_detector.DetectEyePose(image, face_landmarks)
       # TODO(xl): would norm to 0-180 in future, only use to judge body pose
       head_angle = min(head_angle, self.face_detector.CalcHeadAngle(image, face_landmarks))
-      PoseDetector.logger.info(f"head angle={head_angle}")
+      PoseDetector.logger.info(f"detect face, then head angle={head_angle}")
        
       # head and face
+      face_angle = self.face_detector.CalFaceAngle(image, face_landmarks)
+      PoseDetector.logger.info(f"face angle={face_angle}")
       pose_result.head = HeadPose.Bow
       
       pose_result.head_prob = 0.5
