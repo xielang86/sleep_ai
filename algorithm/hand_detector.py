@@ -47,7 +47,7 @@ class HandDetector:
 
     return left_thumb_distance,right_thumb_distance
 
-  def DetectHandPose(self, image, landmarks):
+  def DetectHandPose(self, message_id, image, landmarks):
     image_height, image_width, _ = image.shape
     left_hand_pose = HandPose.BodySide
     left_hand_prob = 0.5
@@ -61,6 +61,7 @@ class HandDetector:
     left_elbow_vis = landmark[self.mp_pose.PoseLandmark.LEFT_ELBOW].visibility
     right_elbow_vis = landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].visibility
     nose_vis = landmark[self.mp_pose.PoseLandmark.NOSE].visibility
+    HandDetector.logger.info(f"message_id{message_id}")
     HandDetector.logger.debug(f"left_wrist_vis = {left_wrist_vis}, right_wrist_vis={right_wrist_vis}, left_thumb_vs={left_thumb_vis}, right_thumb_vs={right_thumb_vis}, left_elbow_vis={left_elbow_vis} right_elbow_vis={right_elbow_vis} nose={nose_vis}")
     nose = (int(landmark[self.mp_pose.PoseLandmark.NOSE].x * image_width),
                int(landmark[self.mp_pose.PoseLandmark.NOSE].y * image_height))
@@ -104,7 +105,7 @@ class HandDetector:
     left_dist_wrist_nose = distance_pair(left_wrist, nose)
 
     def CalcHandAngle(thumb, wrist):
-      angle = abs(np.arctan2(thumb[1] - wrist[1], abs(thumb[0] - wrist[0])) * 180 / np.pi)
+      angle = np.arctan2(-thumb[1] + wrist[1], abs(thumb[0] - wrist[0])) * 180 / np.pi
       return angle
 
     # cal hand angle
@@ -121,16 +122,16 @@ class HandDetector:
     HandDetector.logger.debug(f"left_wrist={left_wrist}, left_shoulder={left_shoulder}, left_ebow={left_elbow}, wrist_elbow={left_dist_wrist_elbow},wrist_hip={left_dist_wrist_hip},wrist_shoulder={left_dist_wrist_shoulder}")
     HandDetector.logger.debug(f"left_thumb={left_thumb}, left_thumb_elbow={left_dist_thumb_elbow}, left_wrist_nose={left_dist_wrist_nose} ,left_hand_angle={left_hand_angle}")
     HandDetector.logger.debug(f"left_thumb_body_dist={left_thumb_body_dist}, right_thumb_body_dist={right_thumb_body_dist}")
-    vis_thres = 0.1
+    vis_thres = 0.15
     if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
       left_hand_pose = HandPose.BodySide
     elif left_wrist_vis > vis_thres and abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
       left_hand_pose = HandPose.OnAbdomen
     elif left_wrist_vis > vis_thres and abs(left_wrist[0] - mid_shoulder_x) < threshold_x and abs(left_wrist[1] - mid_shoulder_y) < threshold_y:
       left_hand_pose = HandPose.OnChest
-    elif left_wrist_vis > vis_thres and left_dist_wrist_hip > left_dist_wrist_elbow and left_hand_angle > 24 and \
+    elif left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and left_dist_wrist_hip > left_dist_wrist_elbow and left_hand_angle > 24 and \
        (abs(left_hand_angle - 90 ) < 15 or \
-      (abs(left_hand_angle - 90) < 45 and left_thumb_body_dist > left_dist_wrist_elbow and (left_dist_wrist_elbow * 1.2 < left_dist_wrist_hip or left_dist_wrist_hip > left_dist_wrist_nose))):
+      (abs(left_hand_angle - 90) < 51 and left_thumb_body_dist > left_dist_wrist_elbow and (left_dist_wrist_elbow * 1.2 < left_dist_wrist_hip or left_dist_wrist_hip > left_dist_wrist_nose))):
       left_hand_pose = HandPose.LiftOn
 
         # 判断右手位置
@@ -145,9 +146,9 @@ class HandDetector:
       right_hand_pose = HandPose.OnAbdomen
     elif right_wrist_vis > vis_thres and abs(right_wrist[0] - mid_shoulder_x) < threshold_x and abs(right_wrist[1] - mid_shoulder_y) < threshold_y:
       right_hand_pose = HandPose.OnChest
-    elif right_wrist_vis > vis_thres and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \
+    elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and right_thumb[1] < right_elbow[1] and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \
        (abs(right_hand_angle - 90 ) < 15 or \
-      (abs(right_hand_angle - 90) < 45 and right_thumb_body_dist > right_dist_wrist_elbow and (right_dist_wrist_elbow * 1.2 < right_dist_wrist_hip or right_dist_wrist_hip > right_dist_wrist_nose))):
+      (abs(right_hand_angle - 90) < 51 and right_thumb_body_dist > right_dist_wrist_elbow and (right_dist_wrist_elbow * 1.2 < right_dist_wrist_hip or right_dist_wrist_hip > right_dist_wrist_nose))):
       right_hand_pose = HandPose.LiftOn
 
     return left_hand_pose,left_hand_prob,right_hand_pose, right_hand_prob

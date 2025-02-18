@@ -154,12 +154,12 @@ class PoseDetector:
     #     pose_type = PoseType.LieSide
     return body_pose,body_prob
 
-  def Detect(self, session_id, image) -> PoseResult:
+  def Detect(self, message_id, image) -> PoseResult:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mp_result = self.pose.process(image)
     pose_result = PoseResult()
 
-    PoseDetector.logger.info(f"session_id={session_id}")
+    PoseDetector.logger.info(f"message_id={message_id}")
     if mp_result is None or mp_result.pose_landmarks is None:
       print("mediapipe detect none body")
       return pose_result
@@ -199,8 +199,8 @@ class PoseDetector:
 
 
     # hand
-    pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.hand_detector.DetectHandPose(image, landmarks)
-    PoseDetector.logger.info(f"hand={pose_result.left_hand}")
+    pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.hand_detector.DetectHandPose(message_id, image, landmarks)
+    PoseDetector.logger.info(f"hand={pose_result.left_hand},{pose_result.right_hand}")
 
     # foot
     pose_result.foot = FootPose.OnLoad

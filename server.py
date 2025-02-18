@@ -51,7 +51,7 @@ class RpcServer:
       audio_bytes = base64.b64decode(audio_base64)
 
     # 调用 posedetector 类的方法进行处理
-    result = self.sleep_phrase_detector.DetectSleepPhrase(uid, session_id, images, audio_bytes)
+    result = self.sleep_phrase_detector.DetectSleepPhrase(uid, message_id, images, audio_bytes)
     sleep_status = "Awake"
     if result != None:
       sleep_status = result.sleep_type.name
