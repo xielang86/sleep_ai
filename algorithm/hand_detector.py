@@ -121,8 +121,11 @@ class HandDetector:
       return angle
 
     # cal hand angle
-    left_hand_angle = CalcHandAngle(left_thumb, left_wrist)
-    right_hand_angle = CalcHandAngle(right_thumb, right_wrist)
+    # left_hand_angle = CalcHandAngle(left_thumb, left_wrist)
+    # right_hand_angle = CalcHandAngle(right_thumb, right_wrist)
+
+    left_hand_angle = CalcHandAngle(left_wrist, left_elbow)
+    right_hand_angle = CalcHandAngle(right_wrist, right_elbow)
 
     left_thumb_body_dist,right_thumb_body_dist = self.CalcThumbBodyDist(image, landmark)
 
@@ -142,10 +145,11 @@ class HandDetector:
       left_hand_pose = HandPose.OnAbdomen
     elif left_wrist_vis > vis_thres and left_hand_angle > 39 and left_hand_angle < 60 and right_elbow_vis and left_wrist_dist_right_elbow < left_dist_wrist_elbow:
       left_hand_pose = HandPose.OnChest
-    elif ((head_angle < -70 and head_angle > -110) or (head_angle > 70 and head_angle < 110)) and abs(left_hand_angle - 90) < 20:
+    elif left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and \
+      (abs(left_hand_angle) > 81 or (abs(left_hand_angle) > 70 and ((head_angle < -70 and head_angle > -110) or (head_angle > 70 and head_angle < 110)))):
       left_hand_pose = HandPose.LiftOn
     elif left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and \
-      left_dist_wrist_nose < left_dist_wrist_elbow * 3.2  and left_dist_wrist_hip > left_dist_wrist_elbow and left_hand_angle > 24 and \
+      left_dist_wrist_nose < left_dist_wrist_elbow * 3.34  and left_dist_wrist_hip > left_dist_wrist_elbow and abs(left_hand_angle) > 24 and \
        (abs(left_hand_angle - 90 ) < 15 or \
       (abs(left_hand_angle - 90) < 51 and left_thumb_body_dist > left_dist_wrist_elbow and (left_dist_wrist_elbow * 1.2 < left_dist_wrist_hip or left_dist_wrist_hip > left_dist_wrist_nose))):
       left_hand_pose = HandPose.LiftOn
@@ -163,7 +167,8 @@ class HandDetector:
       right_hand_pose = HandPose.OnAbdomen
     elif right_wrist_vis > vis_thres and right_hand_angle > 39 and right_hand_angle < 60 and right_wrist_dist_left_elbow < right_dist_wrist_elbow:
       right_hand_pose = HandPose.OnChest
-    elif ((head_angle < -70 and head_angle > -110) or (head_angle > 70 and head_angle < 110)) and abs(right_hand_angle - 90) < 20:
+    elif right_wrist_vis > vis_thres and right_elbow_vis > vis_thres and \
+      (abs(right_hand_angle) > 81 or (abs(right_hand_angle) > 70 and ((head_angle < -70 and head_angle > -110) or (head_angle > 70 and head_angle < 110)))):
       right_hand_pose = HandPose.LiftOn
     elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and right_thumb[1] < right_elbow[1] and \
       right_dist_wrist_nose < right_dist_wrist_elbow * 3.2 and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \
