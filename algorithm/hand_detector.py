@@ -152,16 +152,14 @@ class HandDetector:
     # left_hand_angle = CalcHandAngle(left_thumb, left_wrist)
     # right_hand_angle = CalcHandAngle(right_thumb, right_wrist)
 
-    # left_hand_angle = CalcHandAngle(left_wrist, left_elbow)
-    # right_hand_angle = CalcHandAngle(right_wrist, right_elbow)
+    left_hand_angle = CalcHandAngle(left_thumb, left_elbow)
+    right_hand_angle = CalcHandAngle(right_thumb, right_elbow)
 
     left_thumb_body_dist,right_thumb_body_dist = self.CalcThumbBodyDist(image, landmark)
 
     # calc the angle of arm
     left_arm_angle = self.CalcArmAngle(left_wrist, left_elbow, left_shoulder)
     right_arm_angle = self.CalcArmAngle(right_wrist, right_elbow, right_shoulder)
-    left_hand_angle = left_arm_angle
-    right_hand_angle = right_arm_angle
 
     left_hand_above = False
     left_hand_above_dist = 0
@@ -185,13 +183,13 @@ class HandDetector:
       left_hand_pose = HandPose.OnAbdomen
     elif left_wrist_vis > vis_thres and left_hand_angle > 39 and left_hand_angle < 60 and right_elbow_vis and left_wrist_dist_right_elbow < left_dist_wrist_elbow:
       left_hand_pose = HandPose.OnChest
-    elif left_hand_above and left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and abs(left_arm_angle) < 100 and \
-      (abs(left_arm_angle) > 81 or (abs(left_arm_angle) > 70 and ((head_angle < -57 and head_angle > -120) or (head_angle > 60 and head_angle < 120)))):
+    elif left_hand_above and left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and \
+      (abs(left_arm_angle) < 100 or abs(left_hand_angle) > 80 and abs(left_hand_angle) < 100):
+      # (((head_angle < -57 and head_angle > -120) or (head_angle > 60 and head_angle < 120))):
       left_hand_pose = HandPose.LiftOn
-    elif left_hand_above and left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and \
-      left_dist_wrist_nose < left_dist_wrist_elbow * 3.34  and left_dist_wrist_hip > left_dist_wrist_elbow and abs(left_hand_angle) > 24 and \
+    elif left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and \
        (abs(left_hand_angle - 90 ) < 15 or \
-      (abs(left_hand_angle - 90) < 51 and left_thumb_body_dist > left_dist_wrist_elbow and (left_dist_wrist_elbow * 1.2 < left_dist_wrist_hip or left_dist_wrist_hip > left_dist_wrist_nose))):
+      (left_hand_above and abs(left_hand_angle - 90) < 51)):
       left_hand_pose = HandPose.LiftOn
 
         # 判断右手位置
