@@ -15,6 +15,8 @@ class BodyPose(Pose):
   SitDown = 5
   Stand = 6
   Other = 16
+  def __str__(self):
+    return self.name
   
 class HeadPose(Pose):
   Up = 1

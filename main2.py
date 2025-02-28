@@ -17,7 +17,12 @@ def main():
     # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     # rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
     images.append(image)
-    result = detector.DetectSleepPhrase(0, 0, images, None)
+    try:
+      result = detector.DetectSleepPhrase(0, 0, images, None)
+    except Exception as e:
+      print(e)
+      raise e
+
     if result == None:
       print("failed to detect")
     else:
