@@ -166,6 +166,12 @@ class HandDetector:
     if left_wrist_vis:
       left_hand_above, left_hand_above_dist = self.CalcHandFaceKneeLineDistance(left_thumb, nose, left_knee)
 
+    right_hand_above = False
+    right_hand_above_dist = 0
+    if right_wrist_vis:
+      right_hand_above, right_hand_above_dist = self.CalcHandFaceKneeLineDistance(right_thumb, nose, right_knee)
+
+
     # 定义判断范围的阈值
     threshold_x = 30
     threshold_y = 8
@@ -205,8 +211,8 @@ class HandDetector:
       right_hand_pose = HandPose.OnAbdomen
     elif right_wrist_vis > vis_thres and right_hand_angle > 39 and right_hand_angle < 60 and right_wrist_dist_left_elbow < right_dist_wrist_elbow:
       right_hand_pose = HandPose.OnChest
-    elif right_wrist_vis > vis_thres and right_elbow_vis > vis_thres and abs(right_arm_angle) < 100 and \
-      (abs(right_arm_angle) > 81 or (abs(right_arm_angle) > 70 and ((head_angle < -60 and head_angle > -120) or (head_angle > 60 and head_angle < 120)))):
+    elif right_hand_above and right_wrist_vis > vis_thres and right_elbow_vis > vis_thres and \
+      (abs(right_arm_angle) < 100 or abs(right_hand_angle) > 75 and abs(right_hand_angle) < 100):
       right_hand_pose = HandPose.LiftOn
     elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and right_thumb[1] < right_elbow[1] and \
       right_dist_wrist_nose < right_dist_wrist_elbow * 3.2 and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \
