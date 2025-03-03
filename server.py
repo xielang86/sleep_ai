@@ -15,7 +15,7 @@ from contextlib import closing
 class EnumEncoder(json.JSONEncoder):
   def default(self, obj):
     if isinstance(obj, Enum):
-      return obj.value
+      return obj.name
     elif hasattr(obj, "__dataclass_fields__"):
       return asdict(obj)
     return super().default(obj)
