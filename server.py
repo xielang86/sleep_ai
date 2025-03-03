@@ -2,7 +2,9 @@ from concurrent.futures import ThreadPoolExecutor
 from sleep_phrase import SleepPhraseDetector,SleepResult,SleepType
 
 import zerorpc
-import base64
+import base64,json
+from dataclasses import asdict
+from enum import Enum
 import cv2
 import numpy as np
 from contextlib import closing
@@ -10,6 +12,13 @@ from contextlib import closing
 """ request construct
 
 """
+class EnumEncoder(json.JSONEncoder):
+  def default(self, obj):
+    if isinstance(obj, Enum):
+      return obj.value
+    elif hasattr(obj, "__dataclass_fields__"):
+      return asdict(obj)
+    return super().default(obj)
 class RpcServer:
   def __init__(self):
     self.executor = ThreadPoolExecutor(max_workers=5)
@@ -64,9 +73,10 @@ class RpcServer:
       "message_id": message_id,
       "message": "Pose detected successfully",
       "sleep_status": sleep_status,
-      "data": str(result)
+      "data":  result
     }
-    return response
+    return json.loads(json.dumps(response, cls=EnumEncoder))
+    # return json.loads(response)
 
 def main():
   with closing(zerorpc.Server(RpcServer())) as s:
