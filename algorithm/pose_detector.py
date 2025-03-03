@@ -144,7 +144,7 @@ class PoseDetector:
       body_pose = BodyPose.Stand
     elif abs(body_angle) > 85 and abs(body_angle) < 95 or \
       (abs(body_angle) > 41 and abs(body_angle) < 113 and abs(head_angle) > 78 and abs(head_angle) < 102) or \
-      (abs(body_angle) > 75 and abs(body_angle) < 105 and abs(head_angle) > 63 and abs(head_angle) < 117):
+      (abs(body_angle) > 75 and abs(body_angle) < 106 and abs(head_angle) > 63 and abs(head_angle) < 119):
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie 
@@ -183,7 +183,7 @@ class PoseDetector:
       # head and face
       face_angle = self.face_detector.CalFaceAngle(image, face_landmarks)
       PoseDetector.logger.info(f"face angle={face_angle}")
-      # head_angle = min(head_angle, -face_angle[0])
+      head_angle = min(head_angle, -face_angle[0])
       pose_result.head = HeadPose.Bow
       
       pose_result.head_prob = 0.5

@@ -181,16 +181,16 @@ class HandDetector:
     HandDetector.logger.debug(f"left_thumb={left_thumb}, left_thumb_elbow={left_dist_thumb_elbow}, left_wrist_nose={left_dist_wrist_nose} ,left_hand_angle={left_hand_angle}")
     HandDetector.logger.debug(f"left_knee={left_knee}, right_knee={right_knee}, left_wrist_knee={left_dist_wrist_knee} ,right_wrist_knee={right_dist_wrist_knee}")
     HandDetector.logger.debug(f"left_thumb_body_dist={left_thumb_body_dist}, right_thumb_body_dist={right_thumb_body_dist}")
-    HandDetector.logger.debug(f"left_arm_angle={left_arm_angle}, right_arm_angle={right_arm_angle}, left_above={left_hand_above}, left_above_dist={left_hand_above_dist}, right_above={right_hand_above}, right_above_dist{right_hand_above_dist}")
+    HandDetector.logger.debug(f"head_angle={head_angle},left_arm_angle={left_arm_angle}, right_arm_angle={right_arm_angle}, left_above={left_hand_above}, left_above_dist={left_hand_above_dist}, right_above={right_hand_above}, right_above_dist{right_hand_above_dist}")
     vis_thres = 0.15
     if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
       left_hand_pose = HandPose.BodySide
     elif left_hand_above and left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and \
-      (abs(left_arm_angle) < 100 or abs(left_hand_angle) > 80 and abs(left_hand_angle) < 100):
-      # (((head_angle < -57 and head_angle > -120) or (head_angle > 60 and head_angle < 120))):
+      ((abs(left_arm_angle) < 100 or abs(left_hand_angle) > 80 and abs(left_hand_angle) < 100) or \
+      ((abs(left_arm_angle) < 109) and abs(head_angle) < 100)):
       left_hand_pose = HandPose.LiftOn
     elif left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and \
-       (abs(left_hand_angle - 90 ) < 15 or \
+       (abs(left_hand_angle - 90 ) < 10 or \
       (left_hand_above and abs(left_hand_angle - 90) < 51)):
       left_hand_pose = HandPose.LiftOn
     elif left_wrist_vis > vis_thres and abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
@@ -207,8 +207,9 @@ class HandDetector:
     HandDetector.logger.debug(f"left_wrist_right_elbow={left_wrist_dist_right_elbow}, right_wrist_left_elbow={right_wrist_dist_left_elbow}")
     if abs(right_wrist[0] - right_shoulder[0]) < threshold_x and right_wrist[1] > right_shoulder[1]:
       right_hand_pose = HandPose.BodySide
-    elif right_hand_above and right_wrist_vis > vis_thres and right_elbow_vis > vis_thres and \
-      (abs(right_arm_angle) < 100 or abs(right_hand_angle) > 75 and abs(right_hand_angle) < 100):
+    elif right_hand_above and (right_wrist_vis > vis_thres or right_thumb_vis > vis_thres)and \
+      ((abs(right_arm_angle) < 100 or abs(right_hand_angle) > 75 and abs(right_hand_angle) < 100) or \
+      (abs(right_arm_angle) < 109) and abs(head_angle) < 100):
       right_hand_pose = HandPose.LiftOn
     elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and right_thumb[1] < right_elbow[1] and \
       right_dist_wrist_nose < right_dist_wrist_elbow * 3.2 and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \

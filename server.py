@@ -3,7 +3,7 @@ from sleep_phrase import SleepPhraseDetector,SleepResult,SleepType
 
 import zerorpc
 import base64,json
-from dataclasses import asdict
+from dataclasses import asdict,dataclass,field
 from enum import Enum
 import cv2
 import numpy as np
@@ -12,6 +12,16 @@ from contextlib import closing
 """ request construct
 
 """
+@dataclass
+class Response:
+  status_code : int  = 200
+  user_id : str = "0"
+  conversation_id : str = "0"
+  message_id : str = "0"
+  message: str = "Pose detect succ"
+  sleep_status: str = "Awake"
+  data : SleepResult  = field(default_factory = SleepResult)
+
 class EnumEncoder(json.JSONEncoder):
   def default(self, obj):
     if isinstance(obj, Enum):
@@ -65,16 +75,13 @@ class RpcServer:
     if result != None:
       sleep_status = result.sleep_type.name
 
-    # 构建统一的响应结构
-    response = {
-      "status_code": 200,  # 状态码，200 表示成功，其他可以表示不同的状态
-      "user_id": uid,
-      "conversation_id": session_id,
-      "message_id": message_id,
-      "message": "Pose detected successfully",
-      "sleep_status": sleep_status,
-      "data":  result
-    }
+    # 构建统一的响应结
+    response = Response()
+    response.user_id = uid
+    response.conversation_id = session_id
+    response.message = "Pose detected successfully"
+    response.sleep_status = sleep_status
+    response.data = result
     return json.loads(json.dumps(response, cls=EnumEncoder))
     # return json.loads(response)
 
