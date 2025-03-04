@@ -6,7 +6,7 @@ from common.util import *
 from common.logger import CreateCustomLogger
 from .hand_detector import HandDetector
 from .face_detector import FaceDetector
-from .pose import BodyPose,HeadPose,PoseResult,FootPose
+from .pose import BodyPose,HeadPose,PoseResult,FootPose,FaceDirection
 
 """
 NOSE：鼻子的位置。这个关键点对于定位面部方向以及整体头部位置很有用。
@@ -47,8 +47,8 @@ class PoseDetector:
   logger = CreateCustomLogger("pose.log", __name__, logging.DEBUG)
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.05,
-                                 min_tracking_confidence=0.1)
+    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.01,
+                                 min_tracking_confidence=0.01)
     self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1)
     self.face_detector = FaceDetector()
     self.hand_detector = HandDetector()
@@ -185,6 +185,8 @@ class PoseDetector:
       PoseDetector.logger.info(f"face angle={face_angle}")
       head_angle = min(head_angle, -face_angle[0])
       pose_result.head = HeadPose.Bow
+      if (face_angle[1] < 30):
+        pose_result.face_direction = FaceDirection.TowardToCamera
       
       pose_result.head_prob = 0.5
       if (head_angle < -90):

@@ -89,6 +89,7 @@ class HandDetector:
     left_elbow_vis = landmark[self.mp_pose.PoseLandmark.LEFT_ELBOW].visibility
     right_elbow_vis = landmark[self.mp_pose.PoseLandmark.RIGHT_ELBOW].visibility
     nose_vis = landmark[self.mp_pose.PoseLandmark.NOSE].visibility
+    knee_vis = max(landmark[self.mp_pose.PoseLandmark.LEFT_KNEE].visibility, landmark[self.mp_pose.PoseLandmark.RIGHT_KNEE].visibility)
     HandDetector.logger.info(f"message_id{message_id}")
     HandDetector.logger.debug(f"left_wrist_vis = {left_wrist_vis}, right_wrist_vis={right_wrist_vis}, left_thumb_vs={left_thumb_vis}, right_thumb_vs={right_thumb_vis}, left_elbow_vis={left_elbow_vis} right_elbow_vis={right_elbow_vis} nose={nose_vis}")
     nose = (int(landmark[self.mp_pose.PoseLandmark.NOSE].x * image_width),
@@ -161,14 +162,16 @@ class HandDetector:
     left_arm_angle = self.CalcArmAngle(left_wrist, left_elbow, left_shoulder)
     right_arm_angle = self.CalcArmAngle(right_wrist, right_elbow, right_shoulder)
 
+    vis_thres = 0.15
+
     left_hand_above = False
     left_hand_above_dist = 0
-    if left_wrist_vis:
+    if left_wrist_vis > vis_thres and knee_vis > vis_thres + 0.1:
       left_hand_above, left_hand_above_dist = self.CalcHandFaceKneeLineDistance(left_thumb, nose, left_knee)
 
     right_hand_above = False
     right_hand_above_dist = 0
-    if right_wrist_vis:
+    if right_wrist_vis > vis_thres and knee_vis > vis_thres + 0.1:
       right_hand_above, right_hand_above_dist = self.CalcHandFaceKneeLineDistance(right_thumb, nose, right_knee)
 
 
@@ -184,16 +187,15 @@ class HandDetector:
     HandDetector.logger.debug(f"body_angle={body_angle},head_angle={head_angle},left_arm_angle={left_arm_angle}, right_arm_angle={right_arm_angle}, left_above={left_hand_above}, left_above_dist={left_hand_above_dist}, right_above={right_hand_above}, right_above_dist{right_hand_above_dist}")
     restrict_sit = abs(body_angle) > 80 and abs(body_angle) < 100 and abs(head_angle) > 80 and abs(head_angle) < 100
     head_sit = abs(head_angle) < 105 and abs(head_angle) > 75
-    vis_thres = 0.15
     if abs(left_wrist[0] - left_shoulder[0]) < threshold_x and left_wrist[1] > left_shoulder[1]:
       left_hand_pose = HandPose.BodySide
-    elif left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and \
+    elif left_wrist_vis > vis_thres and left_elbow_vis > vis_thres and abs(head_angle) < 115 and \
       ((left_hand_above and (abs(left_arm_angle) < 100 or abs(left_hand_angle) > 80 and abs(left_hand_angle) < 100)) or \
       (abs(left_arm_angle) < 109 and head_sit and (left_hand_above or restrict_sit))):
       left_hand_pose = HandPose.LiftOn
     elif left_wrist_vis > vis_thres and left_thumb_vis > vis_thres and left_thumb[1] < left_elbow[1] and \
-       (abs(left_hand_angle - 90 ) < 10 or \
-      (left_hand_above and abs(left_hand_angle - 90) < 51)):
+       ((abs(left_arm_angle) > 75 and abs(left_arm_angle) < 105 and abs(left_hand_angle - 90 ) < 10) or \
+      (left_hand_above and (abs(left_hand_angle) < 41 or (abs(left_hand_angle - 90) < 51 and left_hand_above_dist * 2.5 > left_dist_wrist_elbow)))):
       left_hand_pose = HandPose.LiftOn
     elif left_wrist_vis > vis_thres and abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
       left_hand_pose = HandPose.OnAbdomen
@@ -218,6 +220,8 @@ class HandDetector:
        (abs(right_hand_angle - 90 ) < 15 or \
       (abs(right_hand_angle - 90) < 51 and right_thumb_body_dist > right_dist_wrist_elbow and \
        (right_dist_wrist_elbow * 1.2 < right_dist_wrist_hip or right_dist_wrist_hip > right_dist_wrist_nose))):
+      right_hand_pose = HandPose.LiftOn
+    elif right_dist_wrist_nose * 1.2 < right_dist_wrist_elbow and right_dist_wrist_hip > 3 * right_dist_wrist_elbow and right_hand_above_dist < right_dist_wrist_nose:
       right_hand_pose = HandPose.LiftOn
     elif right_wrist_vis > vis_thres and abs(right_wrist[0] - mid_abdomen_x) < threshold_x and abs(right_wrist[1] - mid_abdomen_y) < threshold_y:
       right_hand_pose = HandPose.OnAbdomen
