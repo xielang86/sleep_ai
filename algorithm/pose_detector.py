@@ -200,7 +200,7 @@ class PoseDetector:
 
 
     # hand
-    pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.hand_detector.DetectHandPose(message_id, image, landmarks, head_angle)
+    pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = self.hand_detector.DetectHandPose(message_id, image, landmarks, head_angle, body_angle)
     PoseDetector.logger.info(f"hand={pose_result.left_hand},{pose_result.right_hand}")
 
     # foot
