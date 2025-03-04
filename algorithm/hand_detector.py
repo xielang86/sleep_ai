@@ -212,13 +212,13 @@ class HandDetector:
     if abs(right_wrist[0] - right_shoulder[0]) < threshold_x and right_wrist[1] > right_shoulder[1]:
       right_hand_pose = HandPose.BodySide
     elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and \
-      ((right_hand_above and (abs(right_arm_angle) < 100 or abs(right_hand_angle) > 80 and abs(right_hand_angle) < 100)) or \
+      ((right_hand_above and (abs(right_arm_angle) > 54.2 and abs(right_arm_angle) < 100 or abs(right_hand_angle) > 80 and abs(right_hand_angle) < 100)) or \
       (abs(right_arm_angle) < 109 and head_sit and (right_hand_above or restrict_sit))):
       right_hand_pose = HandPose.LiftOn
     elif right_wrist_vis > vis_thres and right_thumb_vis > vis_thres and right_thumb[1] < right_elbow[1] and \
       right_dist_wrist_nose < right_dist_wrist_elbow * 3.2 and right_dist_wrist_hip > right_dist_wrist_elbow and right_hand_angle > 24 and \
        (abs(right_hand_angle - 90 ) < 15 or \
-      (abs(right_hand_angle - 90) < 51 and right_thumb_body_dist > right_dist_wrist_elbow and \
+      (abs(right_hand_angle - 90) < 51 and right_thumb_body_dist > 2* right_dist_wrist_elbow and \
        (right_dist_wrist_elbow * 1.2 < right_dist_wrist_hip or right_dist_wrist_hip > right_dist_wrist_nose))):
       right_hand_pose = HandPose.LiftOn
     elif right_dist_wrist_nose * 1.2 < right_dist_wrist_elbow and right_dist_wrist_hip > 3 * right_dist_wrist_elbow and right_hand_above_dist < right_dist_wrist_nose:
