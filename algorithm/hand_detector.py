@@ -162,7 +162,7 @@ class HandDetector:
     left_arm_angle = self.CalcArmAngle(left_wrist, left_elbow, left_shoulder)
     right_arm_angle = self.CalcArmAngle(right_wrist, right_elbow, right_shoulder)
 
-    vis_thres = 0.15
+    vis_thres = 0.22
 
     left_hand_above = False
     left_hand_above_dist = 0
