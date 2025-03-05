@@ -100,11 +100,39 @@ class PoseDetector:
     body_angle_deg = math.degrees(body_angle_rad)
     return body_angle_deg
 
+  def CalFaceKneeAngle(self, image, landmark)->float: 
+    ih, iw, _ = image.shape
+    # left_eye= landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
+    left_knee = landmark[self.mp_pose.PoseLandmark.LEFT_KNEE.value]
+    # right_eye= landmark[self.mp_pose.PoseLandmark.RIGHT_EYE.value]
+    right_knee = landmark[self.mp_pose.PoseLandmark.RIGHT_KNEE.value]
+    nose = landmark[self.mp_pose.PoseLandmark.NOSE]
+
+    knee_vis = max(left_knee.visibility, right_knee.visibility)
+    nose_vis = nose.visibility
+    vis_thres = 0.18
+    if knee_vis < vis_thres or nose_vis < vis_thres:
+      return 0
+
+    knee = (left_knee.x * iw, left_knee.y * ih)
+    if left_knee.visibility < right_knee.visibility:
+      knee = (left_knee.x * iw, left_knee.y * ih)
+
+    nose = (nose.x * iw, nose.y * ih)
+
+    # calc the angle
+    dx = nose[0] - knee[0]
+    dy = nose[1] - knee[1]
+
+    angle_rad = math.atan2(dy, dx)
+    angle_deg = math.degrees(angle_rad)
+    return angle_deg
+
   def DetectXDirection(self, landmarks):
     # means camera on leftside
     return 1
-     
-  def DetectPoseByRule(self, landmarks, head_angle, body_angle):
+
+  def DetectPoseByRule(self, landmarks, head_angle, body_angle, body_angle2):
     nose = landmarks.landmark[self.mp_pose.PoseLandmark.NOSE.value]
 
     left_eye= landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
@@ -143,7 +171,7 @@ class PoseDetector:
       and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y) and (left_hip.y - left_shoulder.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
     elif abs(body_angle) > 85 and abs(body_angle) < 95 or \
-      (abs(body_angle) > 41 and abs(body_angle) < 113 and abs(head_angle) > 78 and abs(head_angle) < 102) or \
+      (abs(body_angle) > 41 and abs(body_angle) < 111 and abs(head_angle) > 78 and abs(head_angle) < 102) or \
       (abs(body_angle) > 75 and abs(body_angle) < 106 and abs(head_angle) > 63 and abs(head_angle) < 119):
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
@@ -167,11 +195,13 @@ class PoseDetector:
     landmarks = mp_result.pose_landmarks
     
     body_angle = self.CalcBodyAngle(image, landmarks.landmark)
+
+    body_angle2 = self.CalFaceKneeAngle(image, landmarks.landmark)
     # detect eye closed
     face_results = self.face_mesh.process(image)
 
     head_angle = self.CalcHeadAngle(landmarks, image)
-    PoseDetector.logger.info(f"body angle={body_angle}, head angle2={head_angle}")
+    PoseDetector.logger.info(f"body angle={body_angle}, body angle2 = {body_angle2}, head angle2={head_angle}")
     if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
       face_landmarks = face_results.multi_face_landmarks[0]
       # eye
@@ -198,7 +228,7 @@ class PoseDetector:
       PoseDetector.logger.info(f"mouth={pose_result.mouth}")
 
     # body
-    pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle)
+    pose_result.body, pose_result.body_prob = self.DetectPoseByRule(landmarks, head_angle, body_angle, body_angle2)
 
 
     # hand
