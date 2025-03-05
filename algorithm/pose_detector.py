@@ -47,7 +47,7 @@ class PoseDetector:
   logger = CreateCustomLogger("pose.log", __name__, logging.DEBUG)
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.01,
+    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03,
                                  min_tracking_confidence=0.01)
     self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1)
     self.face_detector = FaceDetector()
@@ -170,16 +170,16 @@ class PoseDetector:
     elif abs(body_angle) > 85 and abs(body_angle) < 95 and left_knee.visibility > 0.5 and left_hip.visibility > 0.5 \
       and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y) and (left_hip.y - left_shoulder.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
-    elif abs(body_angle) > 85 and abs(body_angle) < 95 or \
-      (abs(body_angle) > 41 and abs(body_angle) < 111 and abs(head_angle) > 78 and abs(head_angle) < 102) or \
-      (abs(body_angle) > 75 and abs(body_angle) < 106 and abs(head_angle) > 63 and abs(head_angle) < 119):
+    elif (abs(body_angle) > 97 or abs(body_angle2) > 90 or abs(body_angle - body_angle2) < 37) and (abs(body_angle) > 85 and abs(body_angle) < 95 or \
+      (abs(body_angle) > 41 and abs(body_angle) < 111 and abs(head_angle) > 80 and abs(head_angle) < 104) or \
+      (abs(body_angle2) > 57 and abs(body_angle) > 76.3 and abs(body_angle) < 106 and abs(head_angle) > 65 and abs(head_angle) < 117) or \
+        (abs(body_angle2) > 81 and abs(body_angle2) < 99 and abs(head_angle) < 117.4 and abs(head_angle) > 80)):
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
-      body_pose = BodyPose.HalfLie 
-    
-    # 这里简单假设侧躺的情况（可根据实际情况精确调整）
+      body_pose = BodyPose.HalfLie   
     # elif abs(left_hip.y - left_knee.y) > 0.2 or abs(right_hip.y - right_knee.y) > 0.2:
-    #     pose_type = PoseType.LieSide
+    #   body_pose = BodyPose.LieSide
+
     return body_pose,body_prob
 
   def Detect(self, message_id, image) -> PoseResult:
