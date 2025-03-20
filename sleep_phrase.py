@@ -5,6 +5,8 @@ from dataclasses import dataclass, asdict, field
 from enum import Enum
 from common.cache import *
 from common.util import *
+import mediapipe as mp
+
 # thread safe
 class SleepType(Enum):
   Awake = 0
@@ -34,7 +36,13 @@ class SleepResult:
 # thread safe
 class SleepPhraseDetector:
   def __init__(self, num):
-    self.pose_detectors = [pose_detector.PoseDetector() for _ in range(num)]
+    self.mp_pose = mp.solutions.pose
+
+    self.pose_detectors = [pose_detector.PoseDetector( \
+      self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03, min_tracking_confidence=0.01), \
+      mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1) \
+    ) for _ in range(num)]
+
     self.action_detectors = [human_action.HumanActionDetector() for _ in range(num)]
     self.user_cache = ThreadSafeCache(1024*1024, 3600)
 

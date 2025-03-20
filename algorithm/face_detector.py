@@ -12,9 +12,7 @@ class FaceDetector:
   def __init__(self):
     return  
 
-  def DetectEyePose(self, image, face_landmarks):
-    ih, iw, _ = image.shape
-    
+  def DetectEyePose(self, face_landmarks, ih, iw):
     def CalcEyeCloseOpen(ratio):
       eye_pose = EyePose.Closed
       prob = 0
@@ -57,8 +55,7 @@ class FaceDetector:
 
     return left_eye_pose,left_prob,right_eye_pose,right_prob
 
-  def CalFaceAngle(self, image, face_landmarks):
-    ih, iw, _ = image.shape
+  def CalFaceAngle(self, face_landmarks, ih, iw):
     mid_brow = face_landmarks.landmark[168]
     mid_brow_point = (int(mid_brow.x * iw), int(mid_brow.y * ih))
     # 下巴
@@ -87,8 +84,7 @@ class FaceDetector:
     roll_angle = np.arctan2(right_eye_corner_point[1] - left_eye_corner_point[1], right_eye_corner_point[0] - left_eye_corner_point[0]) * 180 / np.pi
     return (pitch_angle, yaw_angle, roll_angle)
 
-  def CalcHeadAngle(self, image, face_landmarks)->float:
-    ih, iw, _ = image.shape
+  def CalcHeadAngle(self, face_landmarks, ih, iw)->float:
     def CalcByEyeMouth(ih, iw, eye_outer_corner, mouth_corner):
       # 获取关键点的像素坐标
       eye_corner_x, eye_corner_y = int(eye_outer_corner.x * iw), int(eye_outer_corner.y * ih)
@@ -115,9 +111,7 @@ class FaceDetector:
     else:
       return right_angle
 
-  def DetectMouthCloseOpen(self, image, face_landmarks):
-    # 获取图像的高度和宽度
-    ih, iw, _ = image.shape
+  def DetectMouthCloseOpen(self, face_landmarks, ih, iw):
     # 获取上下嘴唇中心点的坐标
     upper_lip_center = face_landmarks.landmark[0]
     lower_lip_center = face_landmarks.landmark[17]

@@ -3,6 +3,7 @@ from algorithm.pose_detector import PoseDetector,PoseResult
 import os,sys,json,string
 from enum import Enum
 
+import mediapipe as mp
 from dataclasses import asdict, dataclass,field
 
 @dataclass
@@ -64,6 +65,14 @@ class StatIdx(Enum):
 def CalcStat(ground_truth, result, key, pos_value, stats, image_path, bad_case):
   result_value = result[key]
   ground_value = ground_truth[key]
+
+  # Bodyside and OnChest, same one
+  if (pos_value == "LiftOn"):
+    if result_value != pos_value:
+      result_value = "BodySide"
+    if ground_value != pos_value:
+      ground_value = "BodySide"
+
   is_err = False
   if result_value == ground_value:
     if result_value == pos_value:
@@ -86,7 +95,11 @@ def CalcPR(stats):
   return (precision, recall)
 
 def DoRegressionTest(regression_file, err_file):
-  pose_detector = PoseDetector()
+  mp_pose = mp.solutions.pose
+  pose_detector = PoseDetector(
+      mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03, min_tracking_confidence=0.01), \
+      mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1) \
+  )
   # inter pose would be as positive
   body_stat = [0] * 4
   left_hand_stat = [0] * 4
@@ -97,6 +110,7 @@ def DoRegressionTest(regression_file, err_file):
   
   fout = open(err_file, "w")  
   bad_case = {}
+
   with open(regression_file, 'r') as file:
     data = json.load(file) 
     for record in data:
@@ -109,7 +123,7 @@ def DoRegressionTest(regression_file, err_file):
       
       try:
         pose_result = pose_detector.Detect(0, image)
-        result = json.loads(str(pose_result))
+        result = json.loads((json.dumps(pose_result, cls=CustomEncoder)))
       except Exception as e:
         print(e)
         raise e

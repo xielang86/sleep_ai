@@ -45,15 +45,14 @@ RIGHT_FOOT_INDEX：右脚食指（脚趾）的位置
 """
 class PoseDetector:
   logger = CreateCustomLogger("pose.log", __name__, logging.DEBUG)
-  def __init__(self):
+  def __init__(self, pose, face_mesh):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03,
-                                 min_tracking_confidence=0.01)
-    self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1)
+    self.pose = pose
+    self.face_mesh = face_mesh
     self.face_detector = FaceDetector()
     self.hand_detector = HandDetector()
 
-  def CalcHeadAngle(self, pos_landmarks, image)->float:
+  def CalcHeadAngle(self, pos_landmarks, ih, iw)->float:
     left_eye= pos_landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
     left_mouth= pos_landmarks.landmark[self.mp_pose.PoseLandmark.MOUTH_LEFT.value]
     right_eye = pos_landmarks.landmark[self.mp_pose.PoseLandmark.RIGHT_EYE.value]
@@ -62,13 +61,13 @@ class PoseDetector:
     PoseDetector.logger.debug(f"left eye= {left_eye} left_mouth={left_mouth},right_eye={right_eye},right_mouth={right_mouth}")
 
     # 获取关键点的像素坐标
-    left_eye_x, left_eye_y= int(left_eye.x * image.shape[1]), int(left_eye.y * image.shape[0])
-    left_mouth_x, left_mouth_y = int(left_mouth.x * image.shape[1]), int(left_mouth.y * image.shape[0])
+    left_eye_x, left_eye_y= int(left_eye.x * iw), int(left_eye.y * ih)
+    left_mouth_x, left_mouth_y = int(left_mouth.x * iw), int(left_mouth.y * ih)
     dx = left_eye_x - left_mouth_x
     dy = left_eye_y - left_mouth_y
     if(right_mouth.visibility > 0.5):
-      right_eye_x, right_eye_y= int(right_eye.x * image.shape[1]), int(right_eye.y * image.shape[0])
-      right_mouth_x, right_mouth_y = int(right_mouth.x * image.shape[1]), int(right_mouth.y * image.shape[0])
+      right_eye_x, right_eye_y= int(right_eye.x * iw), int(right_eye.y * ih)
+      right_mouth_x, right_mouth_y = int(right_mouth.x * iw), int(right_mouth.y * ih)
       dx = right_eye_x - right_mouth_x
       dy = right_eye_y - right_mouth_y
 
@@ -80,18 +79,18 @@ class PoseDetector:
 
     return angle_deg
     
-  def CalcBodyAngle(self, image, landmark)->float: 
+  def CalcBodyAngle(self, landmark, ih, iw)->float: 
     left_shoulder_landmark = landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
     left_hip_landmark = landmark[self.mp_pose.PoseLandmark.LEFT_HIP.value]
-    left_shoulder_x, left_shoulder_y = left_shoulder_landmark.x * image.shape[1], left_shoulder_landmark.y * image.shape[0]
-    left_hip_x, left_hip_y = left_hip_landmark.x * image.shape[1], left_hip_landmark.y * image.shape[0]
+    left_shoulder_x, left_shoulder_y = left_shoulder_landmark.x * iw, left_shoulder_landmark.y * ih 
+    left_hip_x, left_hip_y = left_hip_landmark.x * iw, left_hip_landmark.y * ih
     # 计算上半身向后仰的角度（弧度制）
     PoseDetector.logger.debug(f"left shoulder = {left_shoulder_x} left_hip_x={left_hip_x},leftshoudy={left_shoulder_y},lefthipy={left_hip_y}")
 
     right_shoulder_landmark = landmark[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
     right_hip_landmark = landmark[self.mp_pose.PoseLandmark.RIGHT_HIP.value]
-    right_shoulder_x, right_shoulder_y = right_shoulder_landmark.x * image.shape[1], right_shoulder_landmark.y * image.shape[0]
-    right_hip_x, right_hip_y = right_hip_landmark.x * image.shape[1], right_hip_landmark.y * image.shape[0]
+    right_shoulder_x, right_shoulder_y = right_shoulder_landmark.x * iw, right_shoulder_landmark.y * ih 
+    right_hip_x, right_hip_y = right_hip_landmark.x * iw, right_hip_landmark.y * ih
     PoseDetector.logger.debug(f"right shoulderx = {right_shoulder_x} right_hip_x={right_hip_x},rightshoudy={right_shoulder_y},righthipy={right_hip_y}")
 
     dx_body = left_shoulder_x - left_hip_x
@@ -100,8 +99,7 @@ class PoseDetector:
     body_angle_deg = math.degrees(body_angle_rad)
     return body_angle_deg
 
-  def CalFaceKneeAngle(self, image, landmark)->float: 
-    ih, iw, _ = image.shape
+  def CalFaceKneeAngle(self, landmark, ih, iw)->float: 
     # left_eye= landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
     left_knee = landmark[self.mp_pose.PoseLandmark.LEFT_KNEE.value]
     # right_eye= landmark[self.mp_pose.PoseLandmark.RIGHT_EYE.value]
@@ -184,6 +182,7 @@ class PoseDetector:
 
   def Detect(self, message_id, image) -> PoseResult:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    ih, iw, _ = image.shape
     mp_result = self.pose.process(image)
     pose_result = PoseResult()
 
@@ -194,24 +193,24 @@ class PoseDetector:
 
     landmarks = mp_result.pose_landmarks
     
-    body_angle = self.CalcBodyAngle(image, landmarks.landmark)
+    body_angle = self.CalcBodyAngle(landmarks.landmark, ih, iw)
 
-    body_angle2 = self.CalFaceKneeAngle(image, landmarks.landmark)
+    body_angle2 = self.CalFaceKneeAngle(landmarks.landmark, ih, iw)
     # detect eye closed
     face_results = self.face_mesh.process(image)
 
-    head_angle = self.CalcHeadAngle(landmarks, image)
+    head_angle = self.CalcHeadAngle(landmarks, ih, iw)
     PoseDetector.logger.info(f"body angle={body_angle}, body angle2 = {body_angle2}, head angle2={head_angle}")
     if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
       face_landmarks = face_results.multi_face_landmarks[0]
       # eye
-      pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.face_detector.DetectEyePose(image, face_landmarks)
+      pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.face_detector.DetectEyePose(face_landmarks, ih, iw)
       # TODO(xl): would norm to 0-180 in future, only use to judge body pose
-      head_angle = min(head_angle, self.face_detector.CalcHeadAngle(image, face_landmarks))
+      head_angle = min(head_angle, self.face_detector.CalcHeadAngle(face_landmarks, ih, iw))
       PoseDetector.logger.info(f"detect face, then head angle={head_angle}")
        
       # head and face
-      face_angle = self.face_detector.CalFaceAngle(image, face_landmarks)
+      face_angle = self.face_detector.CalFaceAngle(face_landmarks, ih, iw)
       PoseDetector.logger.info(f"face angle={face_angle}")
       head_angle = min(head_angle, -face_angle[0])
       pose_result.head = HeadPose.Bow
@@ -224,7 +223,7 @@ class PoseDetector:
         pose_result.head_prob = max(0 - head_angle, 150) / 150.0
 
       #mouth 
-      pose_result.mouth,pose_result.mouth_prob = self.face_detector.DetectMouthCloseOpen(image, face_landmarks)
+      pose_result.mouth,pose_result.mouth_prob = self.face_detector.DetectMouthCloseOpen(face_landmarks, ih, iw)
       PoseDetector.logger.info(f"mouth={pose_result.mouth}")
 
     # body

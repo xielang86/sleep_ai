@@ -42,8 +42,7 @@ class HandDetector:
     is_above = hand[1] < line_y
     return is_above, distance
 
-  def CalcThumbBodyDist(self, image, landmark):
-    iw, ih, _ = image.shape
+  def CalcThumbBodyDist(self, landmark, ih, iw):
     left_shoulder = [landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].x,
                      landmark[self.mp_pose.PoseLandmark.LEFT_SHOULDER].y,
                      1]
@@ -74,6 +73,10 @@ class HandDetector:
     right_thumb_distance = abs(np.dot(normal, right_thumb) + d) / np.linalg.norm(normal) * max(iw, ih)
 
     return left_thumb_distance,right_thumb_distance
+
+  def CalcHandAngle(thumb, wrist):
+    angle = np.arctan2(-thumb[1] + wrist[1], abs(thumb[0] - wrist[0])) * 180 / np.pi
+    return angle
 
   def DetectHandPose(self, message_id, image, landmarks, head_angle, body_angle):
     image_height, image_width, _ = image.shape
@@ -152,20 +155,17 @@ class HandDetector:
     left_dist_wrist_knee = distance_pair(left_wrist, left_knee)
     right_dist_wrist_knee = distance_pair(right_wrist, right_knee)
 
-    def CalcHandAngle(thumb, wrist):
-      angle = np.arctan2(-thumb[1] + wrist[1], abs(thumb[0] - wrist[0])) * 180 / np.pi
-      return angle
 
     # cal hand angle
     # left_hand_angle = CalcHandAngle(left_thumb, left_wrist)
     # right_hand_angle = CalcHandAngle(right_thumb, right_wrist)
 
-    left_index_angle = CalcHandAngle(left_index, left_elbow) 
-    right_index_angle = CalcHandAngle(right_index, right_elbow)
-    left_hand_angle = CalcHandAngle(left_thumb, left_elbow)
-    right_hand_angle = CalcHandAngle(right_thumb, right_elbow)
+    left_index_angle = HandDetector.CalcHandAngle(left_index, left_elbow) 
+    right_index_angle = HandDetector.CalcHandAngle(right_index, right_elbow)
+    left_hand_angle = HandDetector.CalcHandAngle(left_thumb, left_elbow)
+    right_hand_angle = HandDetector.CalcHandAngle(right_thumb, right_elbow)
 
-    left_thumb_body_dist,right_thumb_body_dist = self.CalcThumbBodyDist(image, landmark)
+    left_thumb_body_dist,right_thumb_body_dist = self.CalcThumbBodyDist(landmark, image_height, image_width)
 
     # calc the angle of arm
     left_arm_angle = self.CalcArmAngle(left_wrist, left_elbow, left_shoulder)
@@ -182,7 +182,6 @@ class HandDetector:
     right_hand_above_dist = 0
     if right_wrist_vis > vis_thres and knee_vis > vis_thres + 0.1:
       right_hand_above, right_hand_above_dist = self.CalcHandFaceKneeLineDistance(right_thumb, nose, right_knee)
-
 
     # 定义判断范围的阈值
     threshold_x = 30
