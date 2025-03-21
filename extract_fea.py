@@ -5,10 +5,14 @@ from enum import Enum
 
 import mediapipe as mp
 from dataclasses import asdict, dataclass,field
-    
+
 def Extract(data_file, fea_file):
   mp_pose = mp.solutions.pose
   extractor = FeatureExtractor()
+  pose = mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03,
+                                 min_tracking_confidence=0.01)
+
+  face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1)
 
   field_names = list(PoseFeature.__dataclass_fields__.keys())
   header = '\t'.join(field_names)
@@ -25,8 +29,17 @@ def Extract(data_file, fea_file):
         sys.stderr.write(f"erro read image{image_path}")
         continue
       
+      image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+      mp_result = pose.process(image)
+      if mp_result is None or mp_result.pose_landmarks is None:
+        print("mediapipe detect none body")
+        continue
+
+      landmarks = mp_result.pose_landmarks
+      face_results = face_mesh.process(image)
       try:
-        fea = extractor.Extract(image)
+        ih, iw, _ = image.shape
+        fea = extractor.Extract(landmarks, face_results, ih, iw)
         if fea == None:
           continue
 

@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from .pose_detector import PoseDetector
-from .hand_detector import HandDetector
+from .body_detector import BodyDetector
 import logging
 import mediapipe as mp
-import cv2
 from common.util import *
 from common.logger import CreateCustomLogger
 from .hand_detector import HandDetector
@@ -13,15 +11,10 @@ class FeatureExtractor:
   logger = CreateCustomLogger("feature.log", __name__, logging.DEBUG)
   def __init__(self):
     self.mp_pose = mp.solutions.pose
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03,
-                                 min_tracking_confidence=0.01)
-
-    self.pose = self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03, min_tracking_confidence=0.01)
-    self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1)
 
     self.face_detector = FaceDetector()
     self.hand_detector = HandDetector()
-    self.pose_detector = PoseDetector(self.pose, self.face_mesh)
+    self.body_detector = BodyDetector()
 
   def GetAllPart(self, landmark, iw, ih):
     self.left_eye = (int(landmark[self.mp_pose.PoseLandmark.LEFT_EYE].x * iw), int(landmark[self.mp_pose.PoseLandmark.LEFT_EYE].y))
@@ -139,31 +132,21 @@ class FeatureExtractor:
     fea.right_hand_above, fea.right_hand_above_dist = self.hand_detector.CalcHandFaceKneeLineDistance(self.right_thumb, self.nose, self.right_knee)
 
   # image: byte seq, return feature
-  def Extract(self, image):
-    # extract body pose fea
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    mp_result = self.pose.process(image)
-
-    # FeatureExtractor.logger.info(f"message_id={message_id}")
-    if mp_result is None or mp_result.pose_landmarks is None:
-      print("mediapipe detect none body")
+  def Extract(self, landmarks, face_results, ih, iw):
+    if landmarks is None:
       return None
 
-    landmarks = mp_result.pose_landmarks
-
-    ih, iw, _ = image.shape
     self.GetAllPart(landmarks.landmark, iw, ih)
     fea = PoseFeature()
 
     self.CalcVis(fea)
 
-    fea.shoulder_hip_angle = self.pose_detector.CalcBodyAngle(landmarks.landmark, ih, iw)
-    fea.face_knee_angle = self.pose_detector.CalFaceKneeAngle(landmarks.landmark, ih, iw)
-    fea.head_angle = self.pose_detector.CalcHeadAngle(landmarks, ih, iw)
+    fea.shoulder_hip_angle = self.body_detector.CalcBodyAngle(landmarks.landmark, ih, iw)
+    fea.face_knee_angle = self.body_detector.CalFaceKneeAngle(landmarks.landmark, ih, iw)
+    fea.head_angle = self.body_detector.CalcHeadAngle(landmarks, ih, iw)
 
     # detect face related fea
-    face_results = self.face_mesh.process(image)
-    if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
+    if face_results and face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
       face_landmarks = face_results.multi_face_landmarks[0]
 
       fea.head_angle_from_face = self.face_detector.CalcHeadAngle(face_landmarks, ih, iw)

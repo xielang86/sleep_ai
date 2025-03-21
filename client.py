@@ -1,13 +1,13 @@
-import base64
+import base64,json
 import numpy as np
 import zerorpc,sys,cv2
 
 
 def main():
   c = zerorpc.Client()
-  # c.connect("tcp://121.43.54.25:4242")
+  c.connect("tcp://121.43.54.25:4242")
   # c.connect("tcp://192.168.0.116:4242")
-  c.connect("tcp://127.0.0.1:4242")
+  # c.connect("tcp://127.0.0.1:4242")
   # c.connect("tcp://114.55.90.104:4242")
 
   request = {
@@ -34,8 +34,7 @@ def main():
     # rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     print(f"rgb image= {len(image)}")
 
-    _, buffer = cv2.imencode('.jpg', image)
-    # _, buffer = cv2.imencode('.jpg', image)
+    _, buffer = cv2.imencode('.jpg', image,  [int(cv2.IMWRITE_JPEG_QUALITY), 100])
     image_bytes = buffer.tobytes()
     # 将字节数据进行 Base64 编码
     base64_string = base64.b64encode(image_bytes).decode('utf-8')
@@ -50,7 +49,9 @@ def main():
   # 构建请求数据
   # print(request)
   response = c.DetectSleepPhrase(request)
-  print(response)
+  data = response.get("data")
+  json_data_str = json.dumps(data)
+  print(json_data_str)
 
 if __name__ == "__main__":
   main()
