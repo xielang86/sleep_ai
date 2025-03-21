@@ -202,7 +202,7 @@ class HandDetector:
     elif left_vis and abs(head_angle) < 115 and \
       ((left_hand_above and (abs(left_arm_angle) < 100 or abs(left_hand_angle) > 80 and abs(left_hand_angle) < 100)) or \
       (abs(left_arm_angle) < 109 and head_sit and (left_hand_above or restrict_sit)) or \
-        (abs(left_arm_angle) < 65) and head_sit and (left_hand_above or restrict_sit or 32 * left_hand_above_dist < left_dist_wrist_elbow)):
+        (abs(left_arm_angle) < 65) and head_sit and (left_hand_above or restrict_sit or 23 * left_hand_above_dist < left_dist_wrist_elbow)):
       HandDetector.logger.debug("lifton1")
       left_hand_pose = HandPose.LiftOn
     elif left_vis and left_thumb[1] < left_elbow[1] and \
