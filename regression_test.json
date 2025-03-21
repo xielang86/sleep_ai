@@ -1614,5 +1614,47 @@
       "foot": "OnLoad",
       "foot_prob": 0.5
     }
+  },
+  {
+    "image_path": "./data\\half_lie_playphone_headsz.jpg",
+    "pose_info": {
+      "body": "SitDown",
+      "body_prob": 0.5,
+      "head": "Bow",
+      "head_prob": 0.5,
+      "face_direction": "HalfToCamera",
+      "face_prob": 0,
+      "left_hand": "LiftOn",
+      "right_hand": "BodySide",
+      "left_eye": "Closed",
+      "left_eye_prob": 0.9857142857142855,
+      "right_eye": "Open",
+      "right_eye_prob": 0.8741230242736872,
+      "mouth": "Closed",
+      "mouth_prob": 0.6281372305989601,
+      "foot": "OnLoad",
+      "foot_prob": 0.5
+    }
+  },
+  {
+    "image_path": "./data\\half_lie_playphone_headsz2.jpg",
+    "pose_info": {
+      "body": "SitDown",
+      "body_prob": 0.5,
+      "head": "Bow",
+      "head_prob": 0.5,
+      "face_direction": "HalfToCamera",
+      "face_prob": 0,
+      "left_hand": "LiftOn",
+      "right_hand": "BodySide",
+      "left_eye": "Open",
+      "left_eye_prob": 0.9857142857142855,
+      "right_eye": "Closed",
+      "right_eye_prob": 0.8741230242736872,
+      "mouth": "Closed",
+      "mouth_prob": 0.6281372305989601,
+      "foot": "OnLoad",
+      "foot_prob": 0.5
+    }
   }
 ]
