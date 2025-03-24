@@ -8,7 +8,7 @@ from .hand_detector import HandDetector
 from .face_detector import FaceDetector
 from .body_detector import BodyDetector
 from .feature_extractor import FeatureExtractor
-from .pose import BodyPose,HeadPose,PoseResult,FootPose,FaceDirection
+from .pose import BodyPose,HeadPose,PoseResult,FootPose,FaceDirection,HandPose
 
 class PoseDetector:
   logger = CreateCustomLogger("pose.log", __name__, logging.DEBUG)
@@ -70,7 +70,25 @@ class PoseDetector:
     sys.stdout.flush()
     return pose_result
 
-  def Detect(self, message_id, image) -> PoseResult:
+  def CalcHandSim(ground_fea, target_fea):
+    sim = 0
+    return sim
+
+  def CalcHandSim(ground_fea, target_fea):
+    sim = 0
+    return sim
+
+  def ModifyByInitPose(self, sleep_fea, fea, pose_result):
+    sit_sim = self.CalcBodySim(sleep_fea, fea)
+    left_hand_sim, right_hand_sim = self.CalcHandSim(sleep_fea, fea)
+    if sit_sim > 0.9 and pose_result.body == BodyPose.SitDown:
+      pose_result.body = BodyPose.HalfLie
+    if left_hand_sim > 0.9 and pose_result.left_hand == HandPose.LiftOn:
+      pose_result.left_hand = HandPose.BodySide
+    if right_hand_sim > 0.9 and pose_result.right_hand == HandPose.LiftOn:
+      pose_result.right_hand = HandPose.BodySide
+
+  def Detect(self, message_id, image, sleep_fea=None) -> PoseResult:
     self.message_id = message_id
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     ih, iw, _ = image.shape
@@ -86,10 +104,14 @@ class PoseDetector:
     # detect eye closed
     face_results = self.face_mesh.process(image)
 
-    fea = self.fea_extractor.Extract(landmarks, face_results, ih, iw) 
+    pose_result = self.DetectByOldRule(landmarks, face_results, ih, iw)
+    if (sleep_fea):
+      fea = self.fea_extractor.Extract(landmarks, face_results, ih, iw) 
+      self.ModifyByInitPose(sleep_fea,  fea, pose_result)
 
-    return self.DetectByOldRule(landmarks, face_results, ih, iw)
+    return pose_result
 
   def DetectBodyByFeaRule(self, fea):
     pose_result = PoseResult()
     return pose_result
+  
