@@ -109,6 +109,12 @@ class FeatureExtractor:
     fea.left_dist_thumb_elbow = distance_pair(self.left_thumb, self.left_elbow)
     fea.left_dist_wrist_shoulder = distance_pair(self.left_wrist, self.left_shoulder)
     fea.left_dist_wrist_nose = distance_pair(self.left_wrist, self.nose)
+
+    fea.right_dist_wrist_hip = distance_pair(hip, self.right_wrist)
+    fea.right_dist_wrist_elbow = distance_pair(self.right_wrist, self.right_elbow)
+    fea.right_dist_thumb_elbow = distance_pair(self.right_thumb, self.right_elbow)
+    fea.right_dist_wrist_shoulder = distance_pair(self.right_wrist, self.right_shoulder)
+    fea.right_dist_wrist_nose = distance_pair(self.right_wrist, self.nose)
     
     fea.left_wrist_dist_right_elbow = distance_pair(self.left_wrist, self.right_elbow)
     fea.right_wrist_dist_left_elbow = distance_pair(self.right_wrist, self.left_elbow)

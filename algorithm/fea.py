@@ -43,6 +43,12 @@ class PoseFeature:
   left_dist_thumb_elbow: float = -1
   left_dist_wrist_shoulder: float = -1
   left_dist_wrist_nose: float = -1
+
+  right_dist_wrist_hip: float = -1 
+  right_dist_wrist_elbow : float = -1
+  right_dist_thumb_elbow: float = -1
+  right_dist_wrist_shoulder: float = -1
+  right_dist_wrist_nose: float = -1
   
   left_wrist_dist_right_elbow: float = -1
   right_wrist_dist_left_elbow: float = -1

@@ -1,5 +1,5 @@
 import logging
-import math
+import numpy as np
 import mediapipe as mp
 import cv2
 from common.util import *
@@ -21,6 +21,16 @@ class PoseDetector:
     self.hand_detector = HandDetector()
     self.body_detector = BodyDetector()
     self.fea_extractor = FeatureExtractor()
+
+    self.left_hand_fea = ["left_dist_wrist_hip", "left_dist_wrist_elbow ", "left_dist_thumb_elbow",
+      "left_dist_wrist_shoulder", "left_dist_wrist_nose", "left_wrist_dist_right_elbow", "left_dist_wrist_knee",
+      "left_index_angle", "left_hand_angle", "left_arm_angle", 
+      "left_thumb_body_dist", "left_hand_above","left_hand_above_dist"]
+
+    self.right_hand_fea = ["right_dist_wrist_hip", "right_dist_wrist_elbow ", "right_dist_thumb_elbow",
+      "right_dist_wrist_shoulder", "right_dist_wrist_nose", "right_wrist_dist_right_elbow", "right_dist_wrist_knee",
+      "right_index_angle", "right_hand_angle", "right_arm_angle", 
+      "right_thumb_body_dist", "right_hand_above","right_hand_above_dist"]
 
   def DetectByOldRule(self, landmarks, face_results, ih, iw) -> PoseResult:
     pose_result = PoseResult()
@@ -70,22 +80,23 @@ class PoseDetector:
     sys.stdout.flush()
     return pose_result
 
-  def CalcHandSim(ground_fea, target_fea):
-    sim = 0
-    return sim
+  def CalcHandDiff(self, ground_fea, target_fea):
+    # calc each relative change, acc all the change
+    left_ground_vec = ChangeToVector(ground_fea, self.left_hand_fea)
+    left_target_vec = ChangeToVector(target_fea, self.left_hand_fea)
+    left_diff_vec = CalculateRelativeDiff(left_ground_vec, left_target_vec)
 
-  def CalcHandSim(ground_fea, target_fea):
-    sim = 0
-    return sim
+    right_ground_vec = ChangeToVector(ground_fea, self.right_hand_fea)
+    right_target_vec = ChangeToVector(target_fea, self.right_hand_fea)
+    right_diff_vec = CalculateRelativeDiff(right_ground_vec, right_target_vec)
+    
+    return np.linalg.norm(left_diff_vec),np.linalg.norm(right_diff_vec)
 
   def ModifyByInitPose(self, sleep_fea, fea, pose_result):
-    sit_sim = self.CalcBodySim(sleep_fea, fea)
-    left_hand_sim, right_hand_sim = self.CalcHandSim(sleep_fea, fea)
-    if sit_sim > 0.9 and pose_result.body == BodyPose.SitDown:
-      pose_result.body = BodyPose.HalfLie
-    if left_hand_sim > 0.9 and pose_result.left_hand == HandPose.LiftOn:
+    left_hand_diff, right_hand_diff = self.CalcHandDiff(sleep_fea, fea)
+    if left_hand_diff < 0.1 and pose_result.left_hand == HandPose.LiftOn:
       pose_result.left_hand = HandPose.BodySide
-    if right_hand_sim > 0.9 and pose_result.right_hand == HandPose.LiftOn:
+    if right_hand_diff < 0.1 and pose_result.right_hand == HandPose.LiftOn:
       pose_result.right_hand = HandPose.BodySide
 
   def Detect(self, message_id, image, sleep_fea=None) -> PoseResult:
