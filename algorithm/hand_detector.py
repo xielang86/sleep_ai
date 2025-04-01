@@ -206,8 +206,13 @@ class HandDetector:
       left_hand_pose = HandPose.LiftOn
     elif left_vis and left_thumb[1] < left_elbow[1] and \
        ((abs(left_arm_angle) > 75 and abs(left_arm_angle) < 105 and abs(left_hand_angle - 90 ) < 10) or \
-      (left_hand_above and (abs(left_hand_angle) < 41 and abs(left_hand_angle) > 38.9 or (abs(left_hand_angle - 90) < 51 and left_hand_above_dist * 2.5 > left_dist_wrist_elbow)))):
+      (left_hand_above and abs(left_arm_angle) < 109.7 and (abs(left_hand_angle) < 41 and abs(left_hand_angle) > 38.9 or (abs(left_hand_angle - 90) < 51 and left_hand_above_dist * 2.5 > left_dist_wrist_elbow)))):
       HandDetector.logger.debug("lifton2")
+      left_hand_pose = HandPose.LiftOn
+    # elif left_dist_wrist_elbow*3.5 > left_dist_wrist_shoulder and left_elbow_vis > 0.5 and left_wrist_vis > 0.15 and left_thumb[1] < left_elbow[1] and \
+    elif  ((left_index_vis > 0.1 and abs(left_arm_angle) < 119 and abs(left_hand_angle - 90) < 4 and abs(left_index_angle - 90) < 4) or \
+      (left_hand_above and abs(left_arm_angle) < 145 and abs(left_hand_angle - 90) < 33 and abs(left_index_angle) < 36)):
+      HandDetector.logger.debug("lifton3")
       left_hand_pose = HandPose.LiftOn
     elif left_vis and abs(left_wrist[0] - mid_abdomen_x) < threshold_x and abs(left_wrist[1] - mid_abdomen_y) < threshold_y:
       left_hand_pose = HandPose.OnAbdomen
@@ -215,6 +220,7 @@ class HandDetector:
       left_hand_pose = HandPose.OnChest
 
         # 判断右手位置
+    right_vis = (right_wrist_vis > vis_thres or right_index_vis > vis_thres or right_thumb_vis > vis_thres) and right_elbow_vis > vis_thres
     right_dist_wrist_hip = distance_pair(hip_pair, right_wrist)
     right_dist_wrist_elbow = distance_pair(right_wrist, right_elbow)
     right_dist_wrist_nose = distance_pair(right_wrist, nose)

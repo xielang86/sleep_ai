@@ -91,6 +91,9 @@ class SleepPhraseDetector:
       print("save %s" % filename)
       cv2.imwrite(filename, image)
 
+  def SetStaticInitImage(self, uid, session_id, images)-> int:
+    return 0
+
   def DetectSleepPhrase(self, uid, session_id, images, audio) -> int: 
     if audio != None:
       print("detect for audio emotion")
