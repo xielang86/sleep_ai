@@ -163,7 +163,7 @@ class BodyDetector:
     elif (abs(body_angle) > 97 or abs(body_angle2) > 90 or abs(body_angle - body_angle2) < 37) and (abs(body_angle) > 85 and abs(body_angle) < 95 or \
       (abs(body_angle) > 41 and abs(body_angle) < 111 and abs(head_angle) > 80 and abs(head_angle) < 104) or \
       (abs(body_angle2) > 57 and abs(body_angle) > 76.3 and abs(body_angle) < 106 and abs(head_angle) > 65 and abs(head_angle) < 117) or \
-        (abs(body_angle2) > 81 and abs(body_angle2) < 99 and (abs(head_angle) < 117.4 or abs(head_angle) < 118 and abs(body_angle) < 105 and abs(body_angle) > 78) and abs(head_angle) > 80)):
+        (abs(body_angle2) > 81 and abs(body_angle2) < 104 and (abs(head_angle) < 117.4 or abs(head_angle) < 121.5 and abs(body_angle) < 105 and abs(body_angle) > 78) and abs(head_angle) > 80)):
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie   
