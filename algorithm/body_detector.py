@@ -140,9 +140,6 @@ class BodyDetector:
     
     return body_pose
 
-  pitch_angle: float = -1
-  yaw_angle: float = -1
-  roll_angle: float = -1
 
   # TODO(xielang): would be rm in future
   def DetectPoseByRule(self, landmarks, fea):
@@ -182,13 +179,12 @@ class BodyDetector:
     BodyDetector.logger.debug(f"mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
     body_prob = 0.5
+    body_pose = self.DetectLie(fea)
+    if body_pose != None:
+      return body_pose 
+
     body_pose = BodyPose.HalfLie
-    
-    if body_angle < 0 and ((body_angle > -10 or body_angle < -170) or \
-    ((body_angle < -165 or body_angle > -15) and ((left_ear.visibility > 0.5 and left_knee.visibility > 0.5 and left_ear.y > left_knee.y) or \
-    (right_ear.visibility > 0.5 and right_knee.visibility > 0.5 and right_ear.y > right_knee.y)))):
-      body_pose = BodyPose.LieFlat
-    elif abs(body_angle) > 85 and abs(body_angle) < 95 and left_knee.visibility > 0.5 and left_hip.visibility > 0.5 \
+    if abs(body_angle) > 85 and abs(body_angle) < 95 and left_knee.visibility > 0.5 and left_hip.visibility > 0.5 \
       and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y) and (left_hip.y - left_shoulder.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
     elif (abs(body_angle) > 97 or abs(body_angle2) > 90 or abs(body_angle - body_angle2) < 37) and (abs(body_angle) > 85 and abs(body_angle) < 95 or \
@@ -198,7 +194,5 @@ class BodyDetector:
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie   
-    # elif abs(left_hip.y - left_knee.y) > 0.2 or abs(right_hip.y - right_knee.y) > 0.2:
-    #   body_pose = BodyPose.LieSide
 
     return body_pose,body_prob
