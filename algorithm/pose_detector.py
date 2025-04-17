@@ -32,45 +32,47 @@ class PoseDetector:
       "right_index_angle", "right_hand_angle", "right_arm_angle", 
       "right_thumb_body_dist", "right_hand_above","right_hand_above_dist"]
 
-  def DetectByOldRule(self, landmarks, face_results, ih, iw) -> PoseResult:
+  def DetectByOldRule(self, landmarks, face_results, fea, ih, iw) -> PoseResult:
     pose_result = PoseResult()
-    head_angle = self.body_detector.CalcHeadAngle(landmarks, ih, iw)
+    # head_angle = self.body_detector.CalcHeadAngle(landmarks, ih, iw)
+    # head_angle = fea.head_angle
     if face_results.multi_face_landmarks and len(face_results.multi_face_landmarks) > 0:
       face_landmarks = face_results.multi_face_landmarks[0]
       # eye
       pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.face_detector.DetectEyePose(face_landmarks, ih, iw)
       # TODO(xl): would norm to 0-180 in future, only use to judge body pose
-      head_angle = min(head_angle, self.face_detector.CalcHeadAngle(face_landmarks, ih, iw))
-      PoseDetector.logger.info(f"detect face, then head angle={head_angle}")
+      # head_angle = min(head_angle, self.face_detector.CalcHeadAngle(face_landmarks, ih, iw))
+      # head_angle = fea.head_angle
+      PoseDetector.logger.info(f"detect face, then head angle={fea.head_angle}")
        
       # head and face
-      face_angle = self.face_detector.CalFaceAngle(face_landmarks, ih, iw)
-      PoseDetector.logger.info(f"face angle={face_angle}")
-      head_angle = min(head_angle, -face_angle[0])
+      # face_angle = self.face_detector.CalFaceAngle(face_landmarks, ih, iw)
+
+      PoseDetector.logger.info(f"face angle={fea.pitch_angle},{fea.yaw_angle},{fea.roll_angle}")
+      # head_angle = min(head_angle, -fea.pitch_angle)
       pose_result.head = HeadPose.Bow
-      if (face_angle[1] < 30):
+      if (fea.yaw_angle < 30):
         pose_result.face_direction = FaceDirection.TowardToCamera
       
       pose_result.head_prob = 0.5
-      if (head_angle < -90):
+      if (fea.head_angle < -90):
         pose_result.head = HeadPose.Up 
-        pose_result.head_prob = max(0 - head_angle, 150) / 150.0
+        pose_result.head_prob = max(0 - fea.head_angle, 150) / 150.0
 
       #mouth 
       pose_result.mouth,pose_result.mouth_prob = self.face_detector.DetectMouthCloseOpen(face_landmarks, ih, iw)
       PoseDetector.logger.info(f"mouth={pose_result.mouth}")
 
-    body_angle = self.body_detector.CalcBodyAngle(landmarks.landmark, ih, iw)
+    # body_angle = self.body_detector.CalcBodyAngle(landmarks.landmark, ih, iw)
+    # body_angle2 = self.body_detector.CalFaceKneeAngle(landmarks.landmark, ih, iw)
 
-    body_angle2 = self.body_detector.CalFaceKneeAngle(landmarks.landmark, ih, iw)
-
-    PoseDetector.logger.info(f"body angle={body_angle}, body angle2 = {body_angle2}, head angle2={head_angle}")
+    PoseDetector.logger.info(f"body angle={fea.shoulder_hip_angle}, body angle2 = {fea.face_knee_angle}, head angle={fea.head_angle}")
     # body
-    pose_result.body, pose_result.body_prob = self.body_detector.DetectPoseByRule(landmarks, head_angle, body_angle, body_angle2)
-
+    # pose_result.body, pose_result.body_prob = self.body_detector.DetectPoseByRule(landmarks, head_angle, body_angle, body_angle2)
+    pose_result.body, pose_result.body_prob = self.body_detector.DetectPoseByRule(landmarks, fea)
     # hand
     pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = \
-      self.hand_detector.DetectHandPose(self.message_id, landmarks, head_angle, body_angle, ih, iw)
+      self.hand_detector.DetectHandPose(self.message_id, landmarks, fea, ih, iw)
     PoseDetector.logger.info(f"hand={pose_result.left_hand},{pose_result.right_hand}")
 
     # foot
@@ -114,10 +116,11 @@ class PoseDetector:
     landmarks = mp_result.pose_landmarks
     # detect eye closed
     face_results = self.face_mesh.process(image)
+    fea = self.fea_extractor.Extract(landmarks, face_results, ih, iw) 
 
-    pose_result = self.DetectByOldRule(landmarks, face_results, ih, iw)
+    pose_result = self.DetectByOldRule(landmarks, face_results, fea, ih, iw)
+    
     if (sleep_fea):
-      fea = self.fea_extractor.Extract(landmarks, face_results, ih, iw) 
       self.ModifyByInitPose(sleep_fea,  fea, pose_result)
 
     return pose_result

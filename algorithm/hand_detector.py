@@ -78,7 +78,13 @@ class HandDetector:
     angle = np.arctan2(-thumb[1] + wrist[1], abs(thumb[0] - wrist[0])) * 180 / np.pi
     return angle
 
-  def DetectHandPose(self, message_id, landmarks, head_angle, body_angle, image_height, image_width):
+  def DetectHandPose(self, message_id, landmarks, fea, image_height, image_width):
+    head_angle = fea.head_angle
+    head_angle = min(head_angle, fea.head_angle_from_face)
+    head_angle = min(head_angle, -fea.pitch_angle)
+
+    body_angle = fea.shoulder_hip_angle
+
     left_hand_pose = HandPose.BodySide
     left_hand_prob = 0.5
     right_hand_pose = HandPose.BodySide

@@ -63,6 +63,9 @@ class FeatureExtractor:
 
     self.left_ear_vis = landmark[self.mp_pose.PoseLandmark.LEFT_EAR].visibility
     self.right_ear_vis =landmark[self.mp_pose.PoseLandmark.RIGHT_EAR].visibility
+    self.left_eye_vis = landmark[self.mp_pose.PoseLandmark.LEFT_EYE].visibility
+    self.right_eye_vis = landmark[self.mp_pose.PoseLandmark.RIGHT_EYE].visibility
+
     self.left_knee_vis = landmark[self.mp_pose.PoseLandmark.LEFT_KNEE].visibility
     self.right_knee_vis = landmark[self.mp_pose.PoseLandmark.RIGHT_KNEE].visibility
     self.left_hip_vis = landmark[self.mp_pose.PoseLandmark.LEFT_HIP].visibility
@@ -71,6 +74,9 @@ class FeatureExtractor:
   def CalcVis(self, fea):
     fea.left_ear_vis = self.left_ear_vis
     fea.right_ear_vis = self.right_ear_vis
+    fea.left_eye_vis = self.left_eye_vis
+    fea.right_eye_vis = self.right_eye_vis
+
     fea.left_knee_vis = self.left_knee_vis
     fea.right_knee_vis = self.right_knee_vis
     fea.left_hip_vis = self.left_hip_vis
@@ -97,12 +103,20 @@ class FeatureExtractor:
     fea.right_eye_shoulder_y_dist = ih * (self.right_shoulder[1] - self.right_eye[1])
     fea.right_shoulder_hip_y_dist = ih * (self.right_hip[1] - self.right_shoulder[1])
 
+    fea.eye_y_dist = ih * abs(self.left_eye[1] - self.right_eye[1])
     shoulder = ((self.left_shoulder[0] + self.right_shoulder[0]) // 2, (self.left_shoulder[1] + self.right_shoulder[1]) // 2)
 
     hip = ((self.left_hip[0] + self.right_hip[0]) // 2, (self.left_hip[1] + self.right_hip[1]) // 2)
 
 
     abdomen = ((shoulder[0] + hip[0]) // 2,  (shoulder[1] + hip[1])//2)
+    
+    if self.left_eye_vis > 0.5:
+      fea.nose_lip_dist = distance_pair(self.nose, self.left_eye)
+    elif self.right_eye_vis > 0.5:
+      fea.nose_lip_dist = distance_pair(self.nose, self.right_eye)
+    else:
+      fea.nose_lip_dist = 0
 
     fea.left_dist_wrist_hip = distance_pair(hip, self.left_wrist)
     fea.left_dist_wrist_elbow = distance_pair(self.left_wrist, self.left_elbow)

@@ -121,8 +121,38 @@ class BodyDetector:
     # means camera on leftside
     return 1
 
+  def DetectLie(self, fea):
+    head_angle = NormAngle(fea.head_angle)
+    head_angle2 = NormAngle(fea.head_angle_from_face)
+    body_angle = NormAngle(fea.shoulder_hip_angle)
+
+    sum_angle = head_angle + body_angle
+    body_pose = None
+    if head_angle < 15 and body_angle < 15 or sum_angle < 25:
+      if fea.eye_y_dist < 10:
+        body_pose = BodyPose.LieFlat
+      else:
+        ratio = fea.eye_y_dist / fea.nose_lip_dist
+        if ratio > 1.0:
+          body_pose = BodyPose.LieSide
+        else:
+          body_pose = BodyPose.LieFlat
+    
+    return body_pose
+
+  pitch_angle: float = -1
+  yaw_angle: float = -1
+  roll_angle: float = -1
+
   # TODO(xielang): would be rm in future
-  def DetectPoseByRule(self, landmarks, head_angle, body_angle, body_angle2):
+  def DetectPoseByRule(self, landmarks, fea):
+    head_angle = fea.head_angle
+    head_angle = min(head_angle, fea.head_angle_from_face)
+    head_angle = min(head_angle, -fea.pitch_angle)
+
+    body_angle = fea.shoulder_hip_angle
+    body_angle2 = fea.face_knee_angle
+
     nose = landmarks.landmark[self.mp_pose.PoseLandmark.NOSE.value]
 
     left_eye= landmarks.landmark[self.mp_pose.PoseLandmark.LEFT_EYE.value]
@@ -153,6 +183,7 @@ class BodyDetector:
 
     body_prob = 0.5
     body_pose = BodyPose.HalfLie
+    
     if body_angle < 0 and ((body_angle > -10 or body_angle < -170) or \
     ((body_angle < -165 or body_angle > -15) and ((left_ear.visibility > 0.5 and left_knee.visibility > 0.5 and left_ear.y > left_knee.y) or \
     (right_ear.visibility > 0.5 and right_knee.visibility > 0.5 and right_ear.y > right_knee.y)))):
