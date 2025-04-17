@@ -36,3 +36,14 @@ def CalculateRelativeDiff(a: np.ndarray, b: np.ndarray) -> np.ndarray:
   c = np.where (mask, b, (a - b) /a) # 条件赋值
   return c
   
+def NormAngle(angle):
+  if angle == -1:
+    return -1
+
+  if angle < 0:
+    angle = 0 - angle
+
+  if angle > 90:
+    angle = 180 - angle
+  
+  return angle
