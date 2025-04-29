@@ -121,22 +121,44 @@ class BodyDetector:
     # means camera on leftside
     return 1
 
+  def DetectUnhealthSit(self, fea):
+    head_angle = NormAngle(fea.head_angle)
+    body_angle = NormAngle(fea.shoulder_hip_angle)
+    body_angle2 = NormAngle(fea.face_knee_angle)
+    if head_angle > 62 and body_angle2 - body_angle > 10:
+      return True
+    
+    if head_angle > 52 and body_angle > 43 and (fea.left_arm_body_angle > 80 or fea.right_arm_body_angle > 80):
+      return True
+
+    return False
+    
   def DetectLie(self, fea):
     head_angle = NormAngle(fea.head_angle)
     head_angle2 = NormAngle(fea.head_angle_from_face)
+    if head_angle2 > 0: 
+      head_angle = min(head_angle, head_angle2)
+
     body_angle = NormAngle(fea.shoulder_hip_angle)
+    body_angle2 = NormAngle(fea.face_knee_angle)
+
+    body_pose = None
+    if body_angle < 0 or head_angle < 0:
+      return body_pose
 
     sum_angle = head_angle + body_angle
-    body_pose = None
-    if head_angle < 15 and body_angle < 15 or sum_angle < 25:
+    if (head_angle < 14 and (body_angle2 > 0 and body_angle2 < 12 or body_angle < 16)) or sum_angle < 26:
+      # print(head_angle)
+      # print(body_angle)
+      # print(body_angle2)
+      # print(sum_angle)
+      body_pose = BodyPose.LieFlat
       if fea.eye_y_dist < 10:
         body_pose = BodyPose.LieFlat
-      else:
+      elif fea.nose_lip_dist > 0.1:
         ratio = fea.eye_y_dist / fea.nose_lip_dist
         if ratio > 1.0:
           body_pose = BodyPose.LieSide
-        else:
-          body_pose = BodyPose.LieFlat
     
     return body_pose
 
@@ -144,8 +166,8 @@ class BodyDetector:
   # TODO(xielang): would be rm in future
   def DetectPoseByRule(self, landmarks, fea):
     head_angle = fea.head_angle
-    head_angle = min(head_angle, fea.head_angle_from_face)
-    head_angle = min(head_angle, -fea.pitch_angle)
+    if fea.head_angle_from_face > -180:
+      head_angle = min(head_angle, fea.head_angle_from_face)
 
     body_angle = fea.shoulder_hip_angle
     body_angle2 = fea.face_knee_angle
@@ -179,18 +201,25 @@ class BodyDetector:
     BodyDetector.logger.debug(f"mout-nose={left_mouth.y-nose.y}, ear-nose={left_ear.y - nose.y}, mouth-ear={left_mouth.y - left_ear.y}")
 
     body_prob = 0.5
-    body_pose = self.DetectLie(fea)
-    if body_pose != None:
-      return body_pose 
+    # body_pose = self.DetectLie(fea)
+    # if body_pose != None:
+    #   return body_pose,body_prob
 
     body_pose = BodyPose.HalfLie
+    norm_body_angle = NormAngle(body_angle)
+    norm_body_angle2 = NormAngle(body_angle2)
+    norm_head_angle = NormAngle(head_angle)
     if abs(body_angle) > 85 and abs(body_angle) < 95 and left_knee.visibility > 0.5 and left_hip.visibility > 0.5 \
       and (left_knee.y - left_hip.y) > (left_shoulder.y - left_eye.y) and (left_hip.y - left_shoulder.y) > (left_shoulder.y - left_eye.y):
       body_pose = BodyPose.Stand
-    elif (abs(body_angle) > 97 or abs(body_angle2) > 90 or abs(body_angle - body_angle2) < 37) and (abs(body_angle) > 85 and abs(body_angle) < 95 or \
+    elif (norm_body_angle > 60 or norm_body_angle2 > 50 or abs(norm_body_angle - norm_body_angle2) < 37) and (norm_body_angle > 85 or \
       (abs(body_angle) > 41 and abs(body_angle) < 111 and abs(head_angle) > 80 and abs(head_angle) < 104) or \
       (abs(body_angle2) > 57 and abs(body_angle) > 76.3 and abs(body_angle) < 106 and abs(head_angle) > 65 and abs(head_angle) < 117) or \
-        (abs(body_angle2) > 81 and abs(body_angle2) < 104 and (abs(head_angle) < 117.4 or abs(head_angle) < 121.5 and abs(body_angle) < 105 and abs(body_angle) > 78) and abs(head_angle) > 80)):
+        (abs(body_angle2) > 81 and abs(body_angle2) < 104 and (abs(head_angle) < 117.4 or abs(head_angle) < 121.5 and abs(body_angle) < 105 and abs(body_angle) > 78) and abs(head_angle) > 80) or
+        norm_head_angle > 74 and norm_head_angle + norm_body_angle > 130): 
+      body_pose = BodyPose.SitDown
+    elif self.DetectUnhealthSit(fea):
+      print("unheath sit")
       body_pose = BodyPose.SitDown
     elif (head_angle < 0 and head_angle > -80 and body_angle > -75) or (body_angle > -90 and head_angle > -60 and head_angle< 0) or (body_angle < -108 and head_angle < -96):
       body_pose = BodyPose.HalfLie   

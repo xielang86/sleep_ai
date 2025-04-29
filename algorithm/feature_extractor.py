@@ -91,19 +91,20 @@ class FeatureExtractor:
     fea.left_elbow_vis  = self.left_elbow_vis 
     fea.right_elbow_vis = self.right_elbow_vis
 
+
   def CalcDist(self, landmark, ih, iw, fea):
-    fea.left_ear_knee_y_dist = ih * (self.left_knee[1] - self.left_ear[1])
-    fea.right_ear_knee_y_dist = ih * (self.right_knee[1] - self.right_ear[1])
+    fea.left_ear_knee_y_dist = (self.left_knee[1] - self.left_ear[1])
+    fea.right_ear_knee_y_dist = (self.right_knee[1] - self.right_ear[1])
 
-    fea.left_hip_knee_y_dist = ih * (self.left_knee[1] - self.left_hip[1])
-    fea.left_eye_shoulder_y_dist = ih * (self.left_shoulder[1] - self.left_eye[1])
-    fea.left_shoulder_hip_y_dist = ih * (self.left_hip[1] - self.left_shoulder[1])
+    fea.left_hip_knee_y_dist = (self.left_knee[1] - self.left_hip[1])
+    fea.left_eye_shoulder_y_dist = (self.left_shoulder[1] - self.left_eye[1])
+    fea.left_shoulder_hip_y_dist = (self.left_hip[1] - self.left_shoulder[1])
 
-    fea.right_hip_knee_y_dist = ih * (self.right_knee[1] - self.right_hip[1])
-    fea.right_eye_shoulder_y_dist = ih * (self.right_shoulder[1] - self.right_eye[1])
-    fea.right_shoulder_hip_y_dist = ih * (self.right_hip[1] - self.right_shoulder[1])
+    fea.right_hip_knee_y_dist = (self.right_knee[1] - self.right_hip[1])
+    fea.right_eye_shoulder_y_dist = (self.right_shoulder[1] - self.right_eye[1])
+    fea.right_shoulder_hip_y_dist = (self.right_hip[1] - self.right_shoulder[1])
 
-    fea.eye_y_dist = ih * abs(self.left_eye[1] - self.right_eye[1])
+    fea.eye_y_dist = abs(self.left_eye[1] - self.right_eye[1])
     shoulder = ((self.left_shoulder[0] + self.right_shoulder[0]) // 2, (self.left_shoulder[1] + self.right_shoulder[1]) // 2)
 
     hip = ((self.left_hip[0] + self.right_hip[0]) // 2, (self.left_hip[1] + self.right_hip[1]) // 2)
@@ -135,13 +136,20 @@ class FeatureExtractor:
 
     fea.left_dist_wrist_knee = distance_pair(self.left_wrist, self.left_knee)
     fea.right_dist_wrist_knee = distance_pair(self.right_wrist, self.right_knee)
+    fea.left_dist_ear_knee = distance_pair(self.left_ear, self.left_knee)
+    fea.right_dist_ear_knee = distance_pair(self.right_ear, self.right_knee)
+    fea.left_dist_shoulder_knee = distance_pair(self.left_shoulder, self.left_knee)
+    fea.right_dist_shoulder_knee = distance_pair(self.right_shoulder, self.right_knee)
 
     fea.left_index_angle = HandDetector.CalcHandAngle(self.left_index, self.left_elbow) 
     fea.right_index_angle = HandDetector.CalcHandAngle(self.right_index, self.right_elbow)
     fea.left_hand_angle = HandDetector.CalcHandAngle(self.left_thumb, self.left_elbow)
     fea.right_hand_angle = HandDetector.CalcHandAngle(self.right_thumb, self.right_elbow)
 
-    fea.left_thumb_body_dist,fea.right_thumb_body_dist = self.hand_detector.CalcThumbBodyDist(landmark,ih, iw)
+    fea.left_arm_body_angle = CalculateThreePointAngle(self.left_hip, self.left_shoulder, self.left_elbow)
+    fea.right_arm_body_angle = CalculateThreePointAngle(self.right_hip, self.right_shoulder, self.right_elbow)
+
+    fea.left_thumb_body_dist,fea.right_thumb_body_dist = self.hand_detector.CalcThumbBodyDist(landmark, ih, iw)
 
     # calc the angle of arm
     fea.left_arm_angle = self.hand_detector.CalcArmAngle(self.left_wrist, self.left_elbow, self.left_shoulder)
@@ -176,4 +184,5 @@ class FeatureExtractor:
   # calc distance
     self.CalcDist(landmarks.landmark, ih, iw, fea)
 
+    FeatureExtractor.logger.info(fea.info())
     return fea

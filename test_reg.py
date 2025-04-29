@@ -25,8 +25,13 @@ class CustomEncoder(json.JSONEncoder):
 image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
 def DetectAllImage(file_root, output_file):
   print(f"trace for {file_root}, {output_file}")
-  pose_detector = PoseDetector()
+  mp_pose = mp.solutions.pose
+  pose_detector = PoseDetector(
+      mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.3, min_tracking_confidence=0.3), \
+      mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1) \
+  )
   results = []
+  image_dict = {}
   # 遍历指定目录
   for root, dirs, files in os.walk(file_root):
     for file in files:
@@ -42,15 +47,22 @@ def DetectAllImage(file_root, output_file):
       if image is None:
         sys.stderr.write(f"erro read image{file_path}")
         continue
-      pose_result = pose_detector.Detect(0, image)
-      if pose_result == None:
-        sys.stderr.write(f"failed to detect {file_path}\n")
-        continue
+
+      try:
+        pose_result = pose_detector.Detect(0, image)
+        if pose_result == None:
+          sys.stderr.write(f"failed to detect {file_path}\n")
+          continue
+      except Exception as e:
+        print(e)
+        raise e
+
       r = Result()
       r.image_path = file_path
       r.pose_info = pose_result
       results.append(r)
-
+  print(len(results))
+  print(results)
 # 使用 with 语句打开文件并写入数据
   with open(output_file, 'w', encoding='utf-8') as file:
   # 使用 json.dump() 将列表写入文件
@@ -97,7 +109,7 @@ def CalcPR(stats):
 def DoRegressionTest(regression_file, err_file):
   mp_pose = mp.solutions.pose
   pose_detector = PoseDetector(
-      mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03, min_tracking_confidence=0.01), \
+      mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.3, min_tracking_confidence=0.3), \
       mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1) \
   )
   # inter pose would be as positive

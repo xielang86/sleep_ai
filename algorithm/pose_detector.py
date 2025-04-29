@@ -42,6 +42,7 @@ class PoseDetector:
       pose_result.left_eye, pose_result.left_eye_prob, pose_result.right_eye, pose_result.right_eye_prob = self.face_detector.DetectEyePose(face_landmarks, ih, iw)
       # TODO(xl): would norm to 0-180 in future, only use to judge body pose
       # head_angle = min(head_angle, self.face_detector.CalcHeadAngle(face_landmarks, ih, iw))
+      # head_angle = min(head_angle, -fea.pitch_angle)
       # head_angle = fea.head_angle
       PoseDetector.logger.info(f"detect face, then head angle={fea.head_angle}")
        
@@ -49,7 +50,6 @@ class PoseDetector:
       # face_angle = self.face_detector.CalFaceAngle(face_landmarks, ih, iw)
 
       PoseDetector.logger.info(f"face angle={fea.pitch_angle},{fea.yaw_angle},{fea.roll_angle}")
-      # head_angle = min(head_angle, -fea.pitch_angle)
       pose_result.head = HeadPose.Bow
       if (fea.yaw_angle < 30):
         pose_result.face_direction = FaceDirection.TowardToCamera
@@ -72,7 +72,7 @@ class PoseDetector:
     pose_result.body, pose_result.body_prob = self.body_detector.DetectPoseByRule(landmarks, fea)
     # hand
     pose_result.left_hand,pose_result.left_hand_prob,pose_result.right_hand,pose_result.right_hand_prob = \
-      self.hand_detector.DetectHandPose(self.message_id, landmarks, fea, ih, iw)
+      self.hand_detector.DetectHandPose(self.message_id, landmarks, fea, pose_result.body, ih, iw)
     PoseDetector.logger.info(f"hand={pose_result.left_hand},{pose_result.right_hand}")
 
     # foot
@@ -101,19 +101,22 @@ class PoseDetector:
     if right_hand_diff < 0.1 and pose_result.right_hand == HandPose.LiftOn:
       pose_result.right_hand = HandPose.BodySide
 
+  def get_mp_result(self):
+    return self.mp_result
+
   def Detect(self, message_id, image, sleep_fea=None) -> PoseResult:
     self.message_id = message_id
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     ih, iw, _ = image.shape
-    mp_result = self.pose.process(image)
+    self.mp_result = self.pose.process(image)
     pose_result = PoseResult()
 
     PoseDetector.logger.info(f"message_id={self.message_id}")
-    if mp_result is None or mp_result.pose_landmarks is None:
+    if self.mp_result is None or self.mp_result.pose_landmarks is None:
       print("mediapipe detect none body")
       return pose_result
 
-    landmarks = mp_result.pose_landmarks
+    landmarks = self.mp_result.pose_landmarks
     # detect eye closed
     face_results = self.face_mesh.process(image)
     fea = self.fea_extractor.Extract(landmarks, face_results, ih, iw) 

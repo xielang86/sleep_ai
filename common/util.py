@@ -37,7 +37,7 @@ def CalculateRelativeDiff(a: np.ndarray, b: np.ndarray) -> np.ndarray:
   return c
   
 def NormAngle(angle):
-  if angle == -1:
+  if angle < -180 or angle > 180:
     return -1
 
   if angle < 0:
@@ -47,3 +47,15 @@ def NormAngle(angle):
     angle = 180 - angle
   
   return angle
+
+def CalculateThreePointAngle(a, b, c):
+  """
+  计算由三个点 a, b, c 形成的角度
+  """
+  radians = math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0])
+  angle = math.degrees(radians)
+  angle = abs(angle)
+  if angle > 180:
+      angle = 360 - angle
+  return angle
+
