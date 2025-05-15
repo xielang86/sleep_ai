@@ -1,3 +1,4 @@
+import platform
 import cv2
 from algorithm.pose_detector import PoseDetector,PoseResult
 import os,sys,json,string
@@ -16,7 +17,7 @@ class Result:
 
 class CustomEncoder(json.JSONEncoder):
   def default(self, obj):
-    if isinstance(obj, Enum): 
+    if isinstance(obj, Enum):
       return obj.name
     return asdict(obj)
 
@@ -128,6 +129,9 @@ def DoRegressionTest(regression_file, err_file):
     for record in data:
       ground_truth = record["pose_info"]
       image_path = record["image_path"]
+      system = platform.system() 
+      if system == "Linux" or system == "Darwin":
+        image_path = image_path.replace('\\', '/')
       image = cv2.imread(image_path)
       if image is None:
         sys.stderr.write(f"erro read image{image_path}")

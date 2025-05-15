@@ -71,6 +71,9 @@ class FeatureExtractor:
     self.left_hip_vis = landmark[self.mp_pose.PoseLandmark.LEFT_HIP].visibility
     self.right_hip_vis = landmark[self.mp_pose.PoseLandmark.RIGHT_HIP].visibility
 
+    FeatureExtractor.logger.debug(f"left_thumb={self.left_thumb}, left_wrist={self.left_wrist}, left_shoulder={self.left_shoulder}, left_ebow={self.left_elbow},left_knee={self.left_knee}")
+    FeatureExtractor.logger.debug(f"right_thumb={self.right_thumb}, right_wrist={self.right_wrist}, right_shoulder={self.right_shoulder}, right_elbow={self.right_elbow}, right_knee={self.right_knee}")
+
   def CalcVis(self, fea):
     fea.left_ear_vis = self.left_ear_vis
     fea.right_ear_vis = self.right_ear_vis

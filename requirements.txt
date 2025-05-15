@@ -1,4 +1,4 @@
 zerorpc
-cv2
+opencv-python
 numpy
 mediapipe
