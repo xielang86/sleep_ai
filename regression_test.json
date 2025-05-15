@@ -945,7 +945,7 @@
     }
   },
   {
-    "image_path": "./data\\sitdown_lift.png",
+    "image_path": "./data\\sitdown_lift.jpg",
     "pose_info": {
       "body": "SitDown",
       "body_prob": 0.5,
