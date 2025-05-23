@@ -58,7 +58,8 @@ def send_trace_request(
   except requests.exceptions.RequestException as e:
     print(f"请求失败: {str(e)}")
     return {"error": str(e)}
-  
+
+ 
 def download_image(
   url: str,
   save_dir: str = "./data3",
@@ -139,7 +140,8 @@ def _get_suggested_filename(response, url) -> str:
   if path:
     filename = os.path.basename(path)
     if filename:
-      return filename if "." in filename else f"image_{hash(url)}.jpg"  # 补全扩展名
+      return filename
+      # return filename if "." in filename else f"image_{hash(url)}.jpg"  # 补全扩展名
   
   # 兜底方案：根据Content-Type生成
   content_type = response.headers.get("Content-Type", "")
@@ -154,6 +156,38 @@ def _print_progress(downloaded: int, total: int) -> None:
   percent = downloaded / total * 100
   bar = "█" * int(percent // 2) + " " * (50 - int(percent // 2))
   print(f"\r⏳ 下载中: |{bar}| {percent:.1f}% ({downloaded}/{total} bytes)", end="")
+
+
+def ExtractAudio(result):
+  audio_data = []
+  save_dir="./data_audio"
+  for item in result["items"]:
+    trace_tree = item["trace_tree"]
+    # print(json.dumps(trace_tree, indent=4, sort_keys=True, ensure_ascii=False))
+    root_part = trace_tree["root"]
+    if root_part is None or root_part.get("message_id") is None or root_part.get("method") is None:
+      continue
+    method = root_part["method"]
+
+    if method != "voice-chat":
+      continue
+
+    srt_rst = trace_tree["srt"]
+    if (srt_rst is None):
+      sys.stderr.write("miss srt, drop case")
+      continue
+
+    text = srt_rst.get("text")
+
+    message_id = root_part.get("message_id")
+
+    audio_url = f"{image_base_url}/{message_id}"
+    audio_path = f"{save_dir}/{message_id}"
+
+    download_image(url=audio_url, save_dir=save_dir) 
+    audio_data.append((audio_path, text))
+
+  return audio_data
 
 
 def ExtractData(result):
@@ -212,8 +246,8 @@ def ExtractData(result):
 if __name__ == "__main__":
   # 示例调用
   page_size = 100
-  start_time = "2025-04-29T13:20"
-  end_time = "2025-04-29T14:00"
+  start_time = "2025-05-01T00:00"
+  end_time = "2025-05-22T09:40"
   result = send_trace_request(
     trace_key="gQewyXpQRTG",
     page=1,
@@ -224,20 +258,28 @@ if __name__ == "__main__":
 
   cnt = result["total"] 
   print(cnt)
-  all_page = cnt / page_size
+  all_page = cnt / page_size + 1
 
   page = 1
   all_hand_num = 0
   all_body_num = 0
   all_err_hand_results = []
   all_err_body_results = []
+  all_audio_result = []
   while page < all_page:
     print(len(result["items"]))
-    hand_num,err_hand_results,body_num,err_body_results = ExtractData(result)
-    all_hand_num += hand_num
-    all_body_num += body_num
-    all_err_hand_results += err_hand_results
-    all_err_body_results += err_body_results
+
+    if sys.argv[1] == "image":
+      hand_num, err_hand_results, body_num, err_body_results = ExtractData(result)
+      all_hand_num += hand_num
+      all_body_num += body_num
+      all_err_hand_results += err_hand_results
+      all_err_body_results += err_body_results
+    elif sys.argv[1] == "audio":
+      # 提取音频数据
+      audio_data = ExtractAudio(result)
+      print(audio_data)
+      all_audio_result += audio_data
 
     page += 1
     result = send_trace_request(
@@ -246,19 +288,23 @@ if __name__ == "__main__":
       page_size=page_size,
       start_time=start_time,
       end_time=end_time
-  )
+    )
 
-  # print(json.dumps(result, indent=2, ensure_ascii=False))
-  with open(sys.argv[1], 'w', encoding='utf-8') as file:
-  # 使用 json.dump() 将列表写入文件
-    json.dump(all_err_hand_results, file, ensure_ascii=False, indent=2)
+  if sys.argv[1] == "image" and len(sys.argv) == 4:
+    with open(sys.argv[2], 'w', encoding='utf-8') as file:
+    # 使用 json.dump() 将列表写入文件
+      json.dump(all_err_hand_results, file, ensure_ascii=False, indent=2)
 
-  with open(sys.argv[2], 'w', encoding='utf-8') as file:
-    json.dump(all_err_body_results, file, ensure_ascii=False, indent=2)
+    with open(sys.argv[3], 'w', encoding='utf-8') as file:
+      json.dump(all_err_body_results, file, ensure_ascii=False, indent=2)
 
-  print(all_hand_num)
-  print(1.0 * len(all_err_hand_results) / all_hand_num)
+    print(all_hand_num)
+    print(1.0 * len(all_err_hand_results) / all_hand_num)
 
-  print(all_body_num)
-  print(1.0 * len(all_err_body_results) / all_body_num)
+    print(all_body_num)
+    print(1.0 * len(all_err_body_results) / all_body_num)
+  elif sys.argv[1] == "audio" and len(sys.argv) == 3:
+    with open(sys.argv[2], 'w', encoding='utf-8') as file:
+    # 使用 json.dump() 将列表写入文件
+      json.dump(all_audio_result, file, ensure_ascii=False, indent=2)
   
