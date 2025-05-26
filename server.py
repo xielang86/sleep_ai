@@ -32,7 +32,7 @@ class EnumEncoder(json.JSONEncoder):
 class RpcServer:
   def __init__(self):
     self.executor = ThreadPoolExecutor(max_workers=5)
-    self.sleep_phrase_detector = SleepPhraseDetector(16)
+    self.sleep_phrase_detector = SleepPhraseDetector(1)
 
   def DetectSleepPhrase(self, request):
       future = self.executor.submit(self._process_request, request)

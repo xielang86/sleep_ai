@@ -39,12 +39,12 @@ class SleepPhraseDetector:
     self.mp_pose = mp.solutions.pose
 
     self.pose_detectors = [pose_detector.PoseDetector( \
-      self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.03, min_tracking_confidence=0.01), \
+      self.mp_pose.Pose(static_image_mode=True, min_detection_confidence=0.3, min_tracking_confidence=0.3), \
       mp.solutions.face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, min_detection_confidence=0.05, min_tracking_confidence=0.1) \
     ) for _ in range(num)]
 
     self.action_detectors = [human_action.HumanActionDetector() for _ in range(num)]
-    self.user_cache = ThreadSafeCache(1024*1024, 3600)
+    self.user_cache = ThreadSafeCache(16, 3600)
 
   def VoteForCurrentPhrase(self, action_result, pose_results) -> SleepType:
     if action_result.body_action != human_action.HumanAction.MotionLess or \

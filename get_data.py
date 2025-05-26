@@ -246,8 +246,8 @@ def ExtractData(result):
 if __name__ == "__main__":
   # 示例调用
   page_size = 100
-  start_time = "2025-05-01T00:00"
-  end_time = "2025-05-22T09:40"
+  start_time = "2025-03-01T00:00"
+  end_time = "2025-04-30T23:59"
   result = send_trace_request(
     trace_key="gQewyXpQRTG",
     page=1,
